@@ -27,6 +27,8 @@ const JSON_RESP_UPDATE_COUNT_INCONSISTENT = 4;
 const JSON_RESP_MSG_UPDATE_COUNT_INCONSISTENT = 'Update Count Inconsistent, should be 1, but it\'s more. Internal Error';
 const JSON_RESP_INVALID_ADD_DATA = 5;
 const JSON_RESP_MSG_INVALID_ADD_DATA = 'Invalid Add Data';
+const JSON_RESP_INVALID_MOVE_DATA = 6;
+const JSON_RESP_MSG_INVALID_MOVE_DATA = 'Invalid Move Data';
 
 
 // here is the format for the response. This is what the 'other side' will
@@ -134,6 +136,17 @@ class SiteController extends Controller
     {
         return $this->render('about');
     }
+    
+    // returns a list of the specs. Will return only active
+    // format is as an array of records
+    public function getSpecs()
+    {
+		$specs = (new Query())->select('id, spec_name')->
+									from('{{%specs}}')->
+									orderBy('spec_name')->
+									all();
+		return $specs;
+	}
 
 	// given a parent node, return a list of all children. This 
 	// has no assumed order of nodes in the list
@@ -144,7 +157,7 @@ class SiteController extends Controller
 	public function getChildList(&$child_list, $parent_id) 
 	{
 		// get the list of all nodes with this parent id
-		$treedata = (new Query())->select('id, parent_id, name, spec_id')->
+		$treedata = (new Query())->select('id, spec_id, parent_id')->
 									from('{{%attributes}}')->
 									where(['parent_id' => $parent_id])->
 									all();
@@ -155,12 +168,112 @@ class SiteController extends Controller
 		foreach($treedata as $row) 
 		{
 			$child_list[] = $row['id'];
-			$this->getChildList($child_list, $row['id']);
+			
+			// make the call if the spec_id == 9999 as that is not a terminal node and need exploration
+			
+			if($row['spec_id'] == 9999)
+				$this->getChildList($child_list, $row['id']);
 		}
 		
 		return;
 	}
 	
+	// finds all the nodes directly decending from the parent. No traversal is done
+	// returns a list of the node_id's
+	public function getImmediateChildList($parent_id)
+	{
+		// get the list of all nodes with this parent id
+		$treedata = (new Query())->select('id')->
+									from('{{%attributes}}')->
+									where(['parent_id' => $parent_id])->
+									all();
+		// return a nice list
+			
+		$children_list = [];	
+		foreach($treedata as $row) 
+			$children_list[] = $row['id'];
+		
+		return $children_list; // list of children with same parent_id (immediate)
+	}
+	
+
+	// given a parent node, return a list of all childrens spec_ids. This 
+	// has no assumed order of nodes in the list
+	//
+	// $child_list must be an initialized
+	// $parent_id is the parent node you are looking for it' children, and parent_id is not in the result set
+	// this is similar to the above except it is used to check for the same
+	// spec_id in any level at or below
+	// ignore ID will be an Id to skip. This is useful for UPDATE operations
+	public function getChildSpecList(&$spec_list, $node_id, $ignore_id) 
+	{
+		// get the list of all nodes with this parent id
+		$treedata = (new Query())->select('id, parent_id, spec_id')->
+									from('{{%attributes}}')->
+									where(['parent_id' => $node_id])->
+									all();
+	
+		// add to the list, and call again with any potentials (recursive)
+		// if no data recursion stops
+		
+		foreach($treedata as $row) 
+		{
+			// skip storing the ignore id if a match, we should still travers it's children in any case
+			
+			if($ignore_id != $row['id'])
+				$spec_list[] = $row['spec_id']; // save the spec_id in the flattend list
+			
+			// skip any terminal/leaf nodes, save the call as we know they can't have any children
+			
+			if($row['spec_id'] == 9999)
+				$this->getChildSpecList($spec_list, $row['id'], $ignore_id);
+		}
+		
+		return;
+	}
+
+	// finds all the nodes directly decending from the parent. No traversal is done
+	// returns the spec_ids at that level
+	
+	public function getImmediateChildSpecList($parent_id, $ignore_id)
+	{
+		// get the list of all nodes with this parent id
+		$treedata = (new Query())->select('id, spec_id')->
+									from('{{%attributes}}')->
+									where(['parent_id' => $parent_id])->
+									all();
+		// return a nice list
+			
+		$children_list = [];	
+		foreach($treedata as $row) 
+			if($ignore_id != $row['id'])
+				$children_list[] = $row['spec_id'];
+		
+		return $children_list; // list of children with same parent_id (immediate)
+	}
+
+	// this will check for a spec on an existing level or below of the tree.
+	// return true if spec exist in the parent and below, false if not
+	// The $node_id should be a parent node, or this will return false 	
+	// note : $ignore_id will ignore the passed in node id so update of 
+	// a record can happen
+	public function isExistingSpec($node_id, $spec_id, $ignore_id = -1)
+	{			
+		$spec_list = [];
+		
+		$this->getChildSpecList($spec_list, $node_id, $ignore_id);
+		 
+		return in_array($spec_id, $spec_list);
+	}
+	
+	// same as above except for immediate children of the specifed node
+	public function isExistingImmediateSpec($node_id, $spec_id, $ignore_id = -1)
+	{					
+		$spec_list = $this->getImmediateChildSpecList($node_id, $ignore_id);
+		 
+		return in_array($spec_id, $spec_list);
+	}
+
 	// remove a recipe and all it's children. Can cause a lot of damage
 	// if used improperly 
 	// returns FALSE on fail, a count (may be 0) on success
@@ -221,17 +334,17 @@ class SiteController extends Controller
 	// false if can't insert a new rec or
 	// the node id of the newly created node (NEED TO FIGURE THIS OUT...)
 
-	public function addRecipeNode($parent_id, $spec_id, $name, $weight, $order, $min, $max)
+	public function addRecipeNode($target_id, $spec_id, $name, $weight, $order, $min, $max)
 	{
 		$name = trim($name);
 	
-		if(!is_numeric($weight) || !is_numeric($order) || !is_numeric($parent_id)  
+		if(!is_numeric($weight) || !is_numeric($order) || !is_numeric($target_id)  
 				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max))
 			return false;
 	
 		// get the parent nodes recipe, it better exist!
 		
-		if(($parent = $this->getRecipeNode($parent_id)) === false)
+		if(($parent = $this->getRecipeNode($target_id)) === false)
 			return false;
 
 		$recipe_id = $parent['recipe_id'];	// must be the same recipe as the parent... Think about it
@@ -247,6 +360,14 @@ class SiteController extends Controller
 		if($this->getRecipeName($recipe_id) === false)
 			return false;
 		
+		// now triple check that the new node's spec_id does not exist in 
+		// the current level or child branches. This has one exception, allow
+		// spec_id of 9999 since you can have many nested 9999 in a branch
+		
+		if($spec_id != 9999)
+			if($this->isExistingImmediateSpec($target_id, $spec_id))
+				return false;	
+		
 		// OK, now add it!
  
 		try
@@ -256,7 +377,7 @@ class SiteController extends Controller
 						'name'=>$name, 
 						'weight' => $weight,
 						'order' => $order,
-						'parent_id' => $parent_id,
+						'parent_id' => $target_id,
 						'spec_id' => $spec_id,
 						'recipe_id' => $recipe_id,
 						'min'=>$min,
@@ -306,6 +427,14 @@ class SiteController extends Controller
 			$min = $max = 0;
 		}
 		
+		// now triple check that the new node's spec_id does not exist in 
+		// the current level. Do not check for parent nodes
+		// that is any nodes with spec_id 9999 as their can be many in branches.
+		
+		if($spec_id != 9999)
+			if($this->isExistingImmediateSpec($node['parent_id'], $spec_id, $node_id))
+				return false;	
+		
 		// OK, now update it! Count is tricky here since if the data is the exact same
 		// it will NOT return an count of 1, but rather a count of 0 since nothing was changed
  
@@ -330,7 +459,104 @@ class SiteController extends Controller
 	
 		return $count; // need to return the inserted record id at some point
 	}
+
+	// helper for the move function. This will just update the
+	// nodes parent linkage, that's all. False on any error
+	// this has no checking, so be sure you call it with correct
+	// values
+	public function updateRecipeParent($node_id, $new_parent_id)
+	{
+		try
+		{
+			$count = Yii::$app->db->createCommand()->update('{{%attributes}}', 
+						[	// upate fields
+							'parent_id'=>$new_parent_id, 
+						],
+						['id' => $node_id]	// where part
+			)->execute();
+			
+			// better update one record. It's also an error IF the record is not updated
+			// which can happen if the new_parent_id is already the same.
+			
+			if($count != 1)
+				return false;
+		}
+		catch(Exception $e)
+		{
+			return false;
+		}
+
+		return true;
+	}
 	
+	// move a node ($source_id) to another parent ($target_id)
+	// initially will only move a $souce node to a target
+	// that is a parent type of node. Source nodes that are leafs
+	// can't be moved to other leafs. This might change as it may
+	// be OK as it might infer a reorder operation. But for now, 
+	// lets keep it simple
+	public function moveRecipeNode($source_id, $target_id)
+	{
+		if(($source_node = $this->getRecipeNode($source_id)) === false)
+			return false;
+
+		if(($target_node = $this->getRecipeNode($target_id)) === false)
+			return false;
+			
+		// OK both nodes exist now some validation
+		
+		// if node is not 9999 then it's not a potential candidate
+		if($target_node['spec_id'] != 9999) // MAGIC NUMBER FOR PARENT NODE TYPE
+			return false;
+			
+		// can't move the recipe root node 
+		if($source_node['parent_id'] == 0)
+			return false;
+			
+		// can't move to the same parent that is already set 
+		if($source_node['parent_id'] == $target_id)
+			return false;
+
+		// better safe then sorry
+		if($source_id == $target_id)
+			return false;
+
+		// make sure same recipe, can't move out of a recipe
+		if($source_node['recipe_id'] != $target_node['recipe_id'])
+			return false;
+			
+///////
+//////////////
+///////// working here
+//////////////
+//////////////
+//////////////
+//////////////
+//////////////
+///////			
+// need to check for current level node existing, if 9999 skip, if not do the check			
+			
+		// This is the last check, you can never copy a source to a target
+		// where the target is a child of the source! This is a more costly
+		// check...
+		
+		$child_list = [];
+		if($this->getChildList($child_list, $source_id) === false)
+			return false;
+			
+		// oops, target is an ancestor of the source, no go	
+		if(in_array($target_id, $child_list))
+			return false;
+			
+		// Ok, now just change the paret of the source to the target
+		
+		if($this->updateRecipeParent($source_id, $target_id) === false)
+			return false;
+			
+		// success!
+		
+		return true;
+	}
 
 	// gets the name of a recipe given it's ID
 	// returns the string or false if not found
@@ -359,6 +585,7 @@ class SiteController extends Controller
 		$jstreedata = (new Query())->select('id, parent_id, name, spec_id')->
 									from('{{%attributes}}')->
 									where(['recipe_id' => $recipe_id])->
+									orderBy('spec_id')->
 									all();
 		if(count($jstreedata) == 0)
 			return false;
@@ -653,8 +880,36 @@ class SiteController extends Controller
         'format' => \yii\web\Response::FORMAT_JSON,
         'data' => $json_response,
 		]);
-
-
 	}
 
+	// move nodes
+	
+	public function actionMoveNode()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+		
+		// do some checking
+			
+		if(!isset($_POST['source_id']) || !is_numeric($_POST['source_id']))
+			throw new \yii\web\BadRequestHttpException;
+
+		if(!isset($_POST['target_id']) || !is_numeric($_POST['target_id']))
+			throw new \yii\web\BadRequestHttpException;
+
+		$source_id = $_POST['source_id'];
+		$target_id = $_POST['target_id'];
+		
+		if($this->moveRecipeNode($source_id, $target_id) === false)
+			$json_response = formatJSONResponse(JSON_RESP_INVALID_MOVE_DATA, JSON_RESP_MSG_INVALID_MOVE_DATA, ['source_id' => $source_id, 'target_id' => $target_id]);
+		else
+			$json_response = formatJSONResponse(JSON_RESP_OK, JSON_RESP_MSG_OK, ['source_id' => $source_id, 'target_id' => $target_id]);
+
+	    return \Yii::createObject([
+        'class' => 'yii\web\Response',
+        'format' => \yii\web\Response::FORMAT_JSON,
+        'data' => $json_response,
+		]);
+	}
+	
 }

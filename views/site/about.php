@@ -1,5 +1,6 @@
 <?php
 use yii\helpers\Html;
+use yii\helpers\ArrayHelper;
 use yii\web\view;
 use yii\helpers\VarDumper;
 
@@ -33,7 +34,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="row">
 	<div class="tree-panel col-sm-8">
-
 	<div id="treeview"></div>	
 	
 
@@ -100,12 +100,26 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 	</div>
 
+<!--
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Spec Id</label>
 	  <div class="controls">
 		<input name="spec_id" placeholder="" class="input-xlarge" type="text">
 	  </div>
 	</div>
+-->	
+	<div class="control-group">
+	  <label class="control-label" for="textinput">Spec Id</label>
+	  <div class="controls">
+		  
+		<?php
+			$specs = $this->context->getSpecs();
+					?>  
+		<?= Html::dropDownList('spec_list', '9999', ArrayHelper::map($specs, 'id', 'spec_name'), 
+								['id'=>'spec_list',
+								]); 
+		?>
+	  </div>
 
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Order</label>
@@ -132,6 +146,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	
 	</fieldset>
 	</form>
+	<!-- debug fields -->
 	<div id="ajax_node_type"></div>
 	<div id="ajax_json_type"></div>
 	<div id="ajax_node_id"></div>
@@ -148,7 +163,6 @@ $this->params['breadcrumbs'][] = $this->title;
 // <script> tags that reference JQuery may not work since JQuery is loaded
 // last.
 $script = <<< JS
-
 
 $(document).ready(function() {
 	
@@ -178,10 +192,12 @@ function clearEdits()
 {
 	$("input[name=name]").val('');			
 	$("input[name=weight]").val('');			
-	$("input[name=spec_id]").val('');			
+	//$("input[name=spec_id]").val('');			
 	$("input[name=order]").val('');			
 	$("input[name=min]").val('');			
-	$("input[name=max]").val('');			
+	$("input[name=max]").val('');		
+	
+	$("#spec_list").val('9999');	
 }
 
 $('#clear').on('click',function(event)
@@ -224,7 +240,9 @@ $('#add').on('click',function(event)
 
 	name = $("input[name=name]").val();
 	weight = $("input[name=weight]").val();
-	spec_id = $("input[name=spec_id]").val();
+	//spec_id = $("input[name=spec_id]").val();
+	spec_id = $("#spec_list").val();
+	
 	order = $("input[name=order]").val();
 	min = $("input[name=min]").val();
 	max = $("input[name=max]").val();
@@ -331,7 +349,10 @@ $('#update').on('click',function(event)
 
 	name = $("input[name=name]").val();
 	weight = $("input[name=weight]").val();
-	spec_id = $("input[name=spec_id]").val();
+	// spec_id = $("input[name=spec_id]").val();
+	
+	spec_id = $("#spec_list").val();
+		
 	order = $("input[name=order]").val();
 	min = $("input[name=min]").val();
 	max = $("input[name=max]").val();
@@ -384,6 +405,7 @@ $('#update').on('click',function(event)
 	
 	$.ajax({
 		url: 'http://localhost/basic/web/index.php?r=site/update-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id   : selected[0], 	// this is the node we want to update
@@ -433,6 +455,7 @@ $('#remove').on('click',function(event)
 	
 	$.ajax({
 		url: 'http://localhost/basic/web/index.php?r=site/remove-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id : selected[0]
@@ -542,7 +565,11 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 
 			$("input[name=name]").val(node.name);			
 			$("input[name=weight]").val(node.weight);			
-			$("input[name=spec_id]").val(node.spec_id);			
+			//$("input[name=spec_id]").val(node.spec_id);
+			
+			// set spec list box
+			$("#spec_list").val(node.spec_id);
+						
 			$("input[name=order]").val(node.order);			
 			$("input[name=min]").val(node.min);			
 			$("input[name=max]").val(node.max);			
@@ -559,6 +586,7 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 			{
 				$("#add").prop("disabled",true);
 			}
+			
 		}
 	});		
 });
@@ -571,14 +599,46 @@ $('#treeview').on('loaded.jstree', function (event, data) {
 });	
 
 $('#treeview').on("move_node.jstree", function (e, data) {
-   //data.node, data.parent, data.old_parent is what you need
 
    //console.log(data);
    alert('Moving Node Id : ' + data.node.id + ' To Node Id : ' + data.parent);
    
-	$('#treeview').jstree().settings.core.themes.stripes = false;
-	$('#treeview').jstree('refresh');	// once added get the new data
-  
+	source_id = data.node.id;
+	target_id = data.parent;
+
+	$.ajax({
+		url: 'http://localhost/basic/web/index.php?r=site/move-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		type: 'post',
+		async: false,	// make non async call as the tree gets odd if we dont
+		data: {
+			source_id : source_id,
+			target_id : target_id			
+		},
+		
+		success: function (data) {
+						
+			node = data.data;
+
+			switch(data.status)
+			{
+				case 0:  break;	// no error
+				case 6:  alert('Application Error ' + data.msg + ',  Source Id : ' + node.source_id + ' Target Id : ' + node.target_id); return;
+				default: alert('Unknown Application Error ' + data.msg); return;
+			}
+	
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			// turn tree red, this is where communication failed or invalid
+			// data to the ajax call was sent.
+		},
+		
+	});
+	
+	$('#treeview').jstree('refresh');
+	$('#treeview').jstree('open_all');
+	clearEdits();
 });
 
 JS;
