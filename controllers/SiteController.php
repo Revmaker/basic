@@ -61,6 +61,8 @@ class SiteController extends Controller
     {
         return [
         
+			'class' => Cors::className(),
+      
             'access' => [
                 'class' => AccessControl::className(),
                 'only' => ['logout'],
