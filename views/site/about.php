@@ -4,6 +4,8 @@ use yii\helpers\ArrayHelper;
 use yii\web\view;
 use yii\helpers\VarDumper;
 
+use yii\helpers\Url;
+
 /* @var $this yii\web\View */
 $this->title = 'About';
 $this->params['breadcrumbs'][] = $this->title;
@@ -34,7 +36,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="row">
 	<div class="tree-panel col-sm-8">
-	<div id="treeview"></div>	
 	
 
 	<?= \yiidreamteam\jstree\JsTree::widget([
@@ -79,10 +80,8 @@ $this->params['breadcrumbs'][] = $this->title;
 	</div> <!-- tree-panel-->
 	
 	<div class="edit-panel col-sm-4">
-	<form class="form-horizontal">
-
+	<form class="form-horizontal"> 
 	<fieldset>
-
 	<!-- Form Name -->
 	<legend>Edit Data Here</legend>
 
@@ -93,6 +92,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 	</div>
 
+<!--
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Weight</label>
 	  <div class="controls">
@@ -100,7 +100,6 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 	</div>
 
-<!--
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Spec Id</label>
 	  <div class="controls">
@@ -108,6 +107,20 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 	</div>
 -->	
+
+	<div class="control-group">
+	  <label class="control-label" for="textinput">Weight</label>
+	  <div class="controls">
+		  
+		<?php
+			$weights = $this->context->getWeights();
+					?>  
+		<?= Html::dropDownList('weight_list', '9999', ArrayHelper::map($weights, 'id', 'weight'), 
+								['id'=>'weight_list',
+								]); 
+		?>
+	  </div>
+
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Spec Id</label>
 	  <div class="controls">
@@ -134,7 +147,8 @@ $this->params['breadcrumbs'][] = $this->title;
 		<input name="min" placeholder="" class="input-xlarge" type="text">
 	  </div>
 	</div>
-		<div class="control-group">
+	
+	<div class="control-group">
 	  <label class="control-label" for="textinput">Max</label>
 	  <div class="controls">
 		<input name="max" placeholder="" class="input-xlarge" type="text">
@@ -162,6 +176,15 @@ $this->params['breadcrumbs'][] = $this->title;
 // other javascript by default are loaded at the end in YII. Inline
 // <script> tags that reference JQuery may not work since JQuery is loaded
 // last.
+
+// Generated URL's for each action's Ajax Call
+$ajax_url['node'] = Url::to(['site/get-node']);
+$ajax_url['add'] = Url::to(['site/add-node']);
+$ajax_url['remove'] = Url::to(['site/remove-node']);
+$ajax_url['update'] = Url::to(['site/update-node']);
+$ajax_url['move'] = Url::to(['site/move-node']);
+
+
 $script = <<< JS
 
 $(document).ready(function() {
@@ -172,6 +195,10 @@ $(document).ready(function() {
 	$("#update").prop("disabled",true);
 	$("#add").prop("disabled",true);
 	$("#move").prop("disabled",true);
+	
+	setReadOnly(true); // inital state is read only
+	
+
 });
 
 // check for integer only number
@@ -191,13 +218,27 @@ function isFloatNum(str)
 function clearEdits()
 {
 	$("input[name=name]").val('');			
-	$("input[name=weight]").val('');			
+	//$("input[name=weight]").val('');			
 	//$("input[name=spec_id]").val('');			
 	$("input[name=order]").val('');			
 	$("input[name=min]").val('');			
 	$("input[name=max]").val('');		
 	
-	$("#spec_list").val('9999');	
+	$("#spec_list").val('9999');
+	$("#weight_list").val('');	
+}
+
+function setReadOnly(state)
+{
+	//input fields
+	$("input[name=name]").prop('readonly', state);
+	$("input[name=order]").prop('readonly', state);
+	$("input[name=min]").prop('readonly', state);
+	$("input[name=max]").prop('readonly', state);
+	
+	// drop down lists
+	$("#spec_list").attr("disabled", state); 
+	$("#weight_list").attr("disabled", state); 
 }
 
 $('#clear').on('click',function(event)
@@ -239,10 +280,11 @@ $('#add').on('click',function(event)
 	alert('Adding Node to Parent ' + selected[0]);
 
 	name = $("input[name=name]").val();
-	weight = $("input[name=weight]").val();
+	//weight = $("input[name=weight]").val();
+	weight_id = $("#spec_list").val();
 	//spec_id = $("input[name=spec_id]").val();
 	spec_id = $("#spec_list").val();
-	
+		
 	order = $("input[name=order]").val();
 	min = $("input[name=min]").val();
 	max = $("input[name=max]").val();
@@ -256,7 +298,7 @@ $('#add').on('click',function(event)
 	}
 	
 	// validate numbers
-	if(!isIntNum(weight))
+	if(!isIntNum(weight_id))
 	{
 		alert('Invalid Weight, must be integer');
 		return;
@@ -296,13 +338,13 @@ $('#add').on('click',function(event)
 	// recipe id, all parms needed
 	
 	$.ajax({
-		url: 'http://localhost/basic/web/index.php?r=site/add-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		url: '{$ajax_url['add']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
 		data: {
 			parent_id : selected[0], 	// this is the parent of the new node. 
 			spec_id   : spec_id,
 			name      : name,
-			weight	  : weight,
+			weight	  : weight_id,
 			order	  : order,
 			min		  : min,
 			max		  : max
@@ -348,7 +390,9 @@ $('#update').on('click',function(event)
 	// recipe id, all parms needed
 
 	name = $("input[name=name]").val();
-	weight = $("input[name=weight]").val();
+	//weight = $("input[name=weight]").val();
+	weight_id = $("#weight_list").val();
+	
 	// spec_id = $("input[name=spec_id]").val();
 	
 	spec_id = $("#spec_list").val();
@@ -366,7 +410,7 @@ $('#update').on('click',function(event)
 	}
 	
 	// validate numbers
-	if(!isIntNum(weight))
+	if(!isIntNum(weight_id))
 	{
 		alert('Invalid Weight, must be integer');
 		return;
@@ -404,14 +448,14 @@ $('#update').on('click',function(event)
 
 	
 	$.ajax({
-		url: 'http://localhost/basic/web/index.php?r=site/update-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		url: '{$ajax_url['update']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id   : selected[0], 	// this is the node we want to update
 			spec_id   : spec_id,
 			name      : name,
-			weight	  : weight,
+			weight	  : weight_id,
 			order	  : order,
 			min		  : min,
 			max		  : max
@@ -454,7 +498,7 @@ $('#remove').on('click',function(event)
 	// alert('Removing Node ID (and children) ' + selected[0]);
 	
 	$.ajax({
-		url: 'http://localhost/basic/web/index.php?r=site/remove-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		url: '{$ajax_url['remove']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
@@ -518,8 +562,9 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		
 	// call the ajax function that gets a node.
 	
+	
 	$.ajax({
-		url:	'http://localhost/basic/web/index.php?r=site/node',	// match URL format for Yii, will be different if 'friendlyURL' is enabled
+		url:	'{$ajax_url['node']}',	// match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 	'post',
 
 		data: {		// data sent in post params
@@ -535,8 +580,8 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		success: function (data) {
 
 			// NON ZERO is an error, display and get out
-			
-			node = data.data;
+
+			node = data.data;		
 
 			if(data.status)
 			{
@@ -564,7 +609,9 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 			// try stuffing some data to input fields
 
 			$("input[name=name]").val(node.name);			
-			$("input[name=weight]").val(node.weight);			
+			//$("input[name=weight]").val(node.weight);			
+			$("#weight_list").val(node.weight);
+			
 			//$("input[name=spec_id]").val(node.spec_id);
 			
 			// set spec list box
@@ -607,7 +654,7 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	target_id = data.parent;
 
 	$.ajax({
-		url: 'http://localhost/basic/web/index.php?r=site/move-node',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		url: '{$ajax_url['move']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
 		async: false,	// make non async call as the tree gets odd if we dont
 		data: {

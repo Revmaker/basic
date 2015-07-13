@@ -56,13 +56,20 @@ function formatJSONResponse($status, $msg, $data)
 class SiteController extends Controller
 {
 	
-	
     public function behaviors()
     {
         return [
-        
+/*
+			[
 			'class' => Cors::className(),
-      
+
+			'cors' => [
+					'Origin' => ['*'],
+					'Access-Control-Request-Method' => ['POST', 'GET', 'HEAD', 'OPTIONS'],
+				],
+			],
+		
+*/		
             'access' => [
                 'class' => AccessControl::className(),
                 'only' => ['logout'],
@@ -152,6 +159,26 @@ class SiteController extends Controller
 									orderBy('spec_name')->
 									all();
 		return $specs;
+	}
+
+	// similar to above, but returns list of valid weights, keep 
+	// results like database just in case we need to pull from db later
+	// 0-10 are valid weights
+	public function getWeights()
+	{
+		return [
+				['id'=> 0, 'weight'=>'0'],
+				['id'=> 1, 'weight'=>'1'],
+				['id'=> 2, 'weight'=>'2'],
+				['id'=> 3, 'weight'=>'3'],
+				['id'=> 4, 'weight'=>'4'],
+				['id'=> 5, 'weight'=>'5'],
+				['id'=> 6, 'weight'=>'6'],
+				['id'=> 7, 'weight'=>'7'],
+				['id'=> 8, 'weight'=>'8'],
+				['id'=> 9, 'weight'=>'9'],
+				['id'=> 10, 'weight'=>'10'],
+			];
 	}
 
 	// given a parent node, return a list of all children. This 
@@ -722,7 +749,7 @@ class SiteController extends Controller
 	}
 	
 	// return a nodes worth of data
-	public function actionNode()
+	public function actionGetNode()
 	{
 		if (!Yii::$app->request->isAjax)
 			throw new \yii\web\MethodNotAllowedHttpException;
@@ -885,7 +912,7 @@ class SiteController extends Controller
         'class' => 'yii\web\Response',
         'format' => \yii\web\Response::FORMAT_JSON,
         'data' => $json_response,
-		]);
+		]); 
 	}
 
 	// move nodes
