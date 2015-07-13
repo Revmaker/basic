@@ -7,6 +7,7 @@ use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\db\Query;
+use yii\filters\Cors;
 use app\models\LoginForm;
 use app\models\ContactForm;
 
@@ -54,9 +55,17 @@ function formatJSONResponse($status, $msg, $data)
 
 class SiteController extends Controller
 {
+	
+	
     public function behaviors()
     {
         return [
+        
+            [
+				'class' => Cors::className(),
+			],
+
+        
             'access' => [
                 'class' => AccessControl::className(),
                 'only' => ['logout'],
