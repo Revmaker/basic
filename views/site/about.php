@@ -2,6 +2,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\web\view;
+use yii\web\JsExpression;
 use yii\helpers\VarDumper;
 
 use yii\helpers\Url;
@@ -35,7 +36,7 @@ $this->params['breadcrumbs'][] = $this->title;
     </p>
 
 <div class="row">
-	<div class="tree-panel col-sm-8">
+	<div class="tree-panel col-sm-7">
 	
 
 	<?= \yiidreamteam\jstree\JsTree::widget([
@@ -62,7 +63,26 @@ $this->params['breadcrumbs'][] = $this->title;
 				'leaf' => ['icon' => 'glyphicon glyphicon-leaf'],
 				'root' => ['icon' => 'glyphicon glyphicon-folder-open']
 			],
-			'plugins' => ['dnd', 'types'],
+			'plugins' => ['dnd', 'types', 'contextmenu'],
+			'contextmenu' => [
+				'items' => new JsExpression('function ($node) {
+                return {
+                    "Expand": {
+                        "label": "Expand Tree",
+                        "action": function (obj) {
+                            this.ExpandTree(obj);
+                        }
+                    },
+                    "Contract": {
+                        "label": "Contract Tree",
+                        "action": function (obj) {
+                            this.ContractTree(obj);
+                        }
+                    },
+                };
+            }'),	// JsExpression
+				
+			],
 		]
 	])
 	?>
@@ -72,14 +92,10 @@ $this->params['breadcrumbs'][] = $this->title;
 	<div>
 		<button id="expand" class="btn btn-primary">Expand</button>
 		<button id="contract" class="btn btn-primary">Contract</button>	
-		<button id="add" class="btn btn-primary">Add</button>
-		<button id="update" class="btn btn-primary">Update</button>
-		<button id="remove" class="btn btn-danger">Remove</button> 
-		<button id="move" class="btn btn-danger">Move</button> 
 	</div>
 	</div> <!-- tree-panel-->
 	
-	<div class="edit-panel col-sm-4">
+	<div class="edit-panel col-sm-5">
 	<form class="form-horizontal"> 
 	<fieldset>
 	<!-- Form Name -->
@@ -157,6 +173,12 @@ $this->params['breadcrumbs'][] = $this->title;
 	<br />
 
 	<button id="clear" class="btn btn-success">clear</button> 
+	<button id="save" class="btn btn-success">Save</button> 
+	<button id="cancel" class="btn btn-success">Cancel</button> 
+	<button id="add" class="btn btn-primary">Add</button>
+	<button id="new" class="btn btn-primary">New</button>
+	<button id="update" class="btn btn-primary">Update</button>
+	<button id="remove" class="btn btn-danger">Remove</button> 
 	
 	</fieldset>
 	</form>
@@ -194,12 +216,18 @@ $(document).ready(function() {
 	$("#remove").prop("disabled",true);
 	$("#update").prop("disabled",true);
 	$("#add").prop("disabled",true);
-	$("#move").prop("disabled",true);
+	$("#new").prop("disabled",true);
+	$("#save").prop("disabled",true);
 	
 	setReadOnly(true); // inital state is read only
-	
-
+	clearEdits();
 });
+
+// expand the tree by default on open
+
+$('#treeview').on('loaded.jstree', function (event, data) {
+	$(this).jstree("open_all");
+});	
 
 // check for integer only number
 function isIntNum(str)
@@ -228,6 +256,7 @@ function clearEdits()
 	$("#weight_list").val('');	
 }
 
+
 function setReadOnly(state)
 {
 	//input fields
@@ -241,27 +270,60 @@ function setReadOnly(state)
 	$("#weight_list").attr("disabled", state); 
 }
 
+$("input[name=name]").on('input', function(event)
+{
+	alert('name change');
+});
+
 $('#clear').on('click',function(event)
 {
 	event.preventDefault(); 
 	clearEdits();
 });
 
-$('#expand').on('click',function(event)
+function ExpandTree(obj)
 {
-	event.preventDefault(); 
 	$('#treeview').jstree('open_all');
-});
+}
 
-$('#contract').on('click',function(event)
+function ContractTree(obj)
 {
-	event.preventDefault(); 
 	$('#treeview').jstree('close_all');
 	$('#treeview').jstree('deselect_all');
 	
 	$("#remove").prop("disabled",true);
 	$("#update").prop("disabled",true);
+}
+
+$('#expand').on('click',function(event)
+{
+	event.preventDefault(); 
+	ExpandTree(null);
 });
+
+$('#contract').on('click',function(event)
+{
+	event.preventDefault(); 
+	ContractTree(null);
+});
+
+$('#new').on('click',function(event)
+{
+	event.preventDefault(); 
+
+	// should only be here IF on a parent node (spec_id == 9999)
+	clearEdits();
+	setReadOnly(false);
+	$("#save").prop("disabled",false);
+});
+
+$('#save').on('click',function(event)
+{
+	event.preventDefault(); 
+	
+	// can be here if add or update save...
+});
+
 
 // Add new node to the tree. Calls remote functions, tree refreshed
 // after add so no changes made to display unless successful
@@ -545,7 +607,8 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		$("#remove").prop("disabled",true);	// can remove if something selected
 		$("#update").prop("disabled",true);
 		$("#add").prop("disabled",true);
-		$("#move").prop("disabled",true);
+		$("#new").prop("disabled",true);
+		$("#save").prop("disabled",true);
 
 		return;
 	}
@@ -558,7 +621,6 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	
 	$("#remove").prop("disabled",false);
 	$("#update").prop("disabled",false);
-	$("#move").prop("disabled",false);
 		
 	// call the ajax function that gets a node.
 	
@@ -628,22 +690,22 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 			if(node['spec_id'] == 9999)
 			{
 				$("#add").prop("disabled",false);
+				$("#new").prop("disabled",false);
+				setReadOnly(false);
 			}
 			else
 			{
 				$("#add").prop("disabled",true);
+				$("#new").prop("disabled",true);
+				
+				$("#save").prop("disabled",true);
+				setReadOnly(true);
 			}
 			
 		}
 	});		
 });
 
-// expand the tree by default on open
-
-$('#treeview').on('loaded.jstree', function (event, data) {
-	$(this).jstree("open_all");
-	clearEdits();
-});	
 
 $('#treeview').on("move_node.jstree", function (e, data) {
 
