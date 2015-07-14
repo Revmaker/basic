@@ -558,16 +558,14 @@ class SiteController extends Controller
 		if($source_node['recipe_id'] != $target_node['recipe_id'])
 			return false;
 			
-///////
-//////////////
-///////// working here
-//////////////
-//////////////
-//////////////
-//////////////
-//////////////
-///////			
-// need to check for current level node existing, if 9999 skip, if not do the check			
+		// check to make sure we are not moving a node with the same
+		// spec ID to a branch with a pre existing spec that matches. 
+		// this is not checked for parent nodes which can nest anywhere
+		// except under a child.
+		
+		if($source_node['spec_id'] != 9999)
+			if($this->isExistingImmediateSpec($target_id, $source_node['spec_id']))
+				return false;	
 			
 		// This is the last check, you can never copy a source to a target
 		// where the target is a child of the source! This is a more costly
@@ -618,7 +616,7 @@ class SiteController extends Controller
 		$jstreedata = (new Query())->select('id, parent_id, name, spec_id')->
 									from('{{%attributes}}')->
 									where(['recipe_id' => $recipe_id])->
-									orderBy('spec_id')->
+									orderBy('name')->
 									all();
 		if(count($jstreedata) == 0)
 			return false;
