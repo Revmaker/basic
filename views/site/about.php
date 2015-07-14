@@ -33,6 +33,12 @@ $this->params['breadcrumbs'][] = $this->title;
 		display: flex; /* equal height of the children */
 	}
 
+	
+	/* removes the top dots on the root node that look bad */
+	
+	.jstreeview .jstree-container-ul > .jstree-open > .jstree-ocl { background-position: -32px 0px;}
+	.jstreeview .jstree-container-ul > .jstree-closed> .jstree-ocl { background-position: 0px 0px; }
+	.jstreeview .jstree-container-ul > .jstree-leaf> .jstree-ocl { background:transparent; }
 
 </style>
    
@@ -49,7 +55,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
 	<?= \yiidreamteam\jstree\JsTree::widget([
 		'containerOptions' => [
-			'class' => 'tree_demo',	// sets the the div's CLASS
+			'class' => 'jstreeview',	// sets the the div's CLASS
 			'id' => 'treeview',		// sets the div's ID
 		],
 		'jsOptions' => [
@@ -271,6 +277,7 @@ function clearEdits()
 
 function setReadOnly(state)
 {
+state = false ; // for testing
 	//input fields
 	$("input[name=name]").prop('readonly', state);
 	$("input[name=order]").prop('readonly', state);
@@ -284,7 +291,7 @@ function setReadOnly(state)
 
 $("input[name=name]").on('input', function(event)
 {
-	alert('name change');
+	
 });
 
 $('#clear').on('click',function(event)
@@ -635,7 +642,6 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	$("#update").prop("disabled",false);
 		
 	// call the ajax function that gets a node.
-	
 	
 	$.ajax({
 		url:	'{$ajax_url['node']}',	// match URL format for Yii, will be different if 'friendlyURL' is enabled
