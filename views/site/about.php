@@ -24,7 +24,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	}
 	
 	#recipe_list {
-		width : 350px;
+		width : 100%;
 	}
 	
 	.tree-panel { 
