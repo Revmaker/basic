@@ -13,22 +13,39 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 
  <style> 
+
+
+	.recipe_select_panel {
+		font-size:16px; 
+		border-style: solid;
+		border-radius : 10px;
+		padding :10px;
+		margin-bottom: 5px;
+	}
+	
+	#recipe_list {
+		width : 350px;
+	}
+	
 	.tree-panel { 
 		font-size:14px; 
 		border-style: solid;
-		border-radius : 10px;
+		border-radius : 10px 0 0 10px;
 		padding :10px;
-		min-height:500px;
+		height:600px;
 		margin-right : 10px;
+		overflow-y : scroll;
 	}
+
 	.edit-panel {
 		font-size:14px; 
 		border-style: solid;
-		border-radius : 10px;
+		border-radius : 0 10px 10px  0;
 		padding :10px;
-		min-height:500px;
+		height:600px;
+		/*margin-left : 10px;*/
 	}
-	
+
 	.row {
 		display: flex; /* equal height of the children */
 	}
@@ -44,9 +61,21 @@ $this->params['breadcrumbs'][] = $this->title;
    
 
 <div class="site-about">
-    <h1><?= Html::encode($this->title) ?></h1>
+	<h1><?= Html::encode($this->title) ?></h1>
 
-    <p>Build a recipe here, then bake it to perfection</p>
+	<div class="row">
+		<div class="recipe_select_panel col-sm-4">
+			<?php
+				$specs = $this->context->getRecipes();
+
+				echo Html::dropDownList('recipe_list', '', ArrayHelper::map($specs, 'id', 'name'), 
+								['id'=>'recipe_list',
+								'prompt' => '--Select Recipe--',
+								]); 
+			?>
+
+		</div>
+	</div>
 
 <div class="row">
 	<div class="tree-panel col-sm-7">
@@ -60,9 +89,6 @@ $this->params['breadcrumbs'][] = $this->title;
 			'core' => [
 				'check_callback' => true,	// needs to be true for DND
 				'multiple' => false,	// allow multiple selections, set to false to allow only single select
-				'data' => [
-					'url' => \yii\helpers\Url::to(['site/tree', 'recipe_id'=>'1']),
-				],
 
 				'themes' => [
 					'variant' => 'large',	// makes tree bigger
@@ -153,7 +179,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		?>
 	  </div>
 
-	<div class="control-group">
+	<div class="control-group no_disp_parent">
 	  <label class="control-label" for="textinput">Spec Id</label>
 	  <div class="controls">
 		  
@@ -165,7 +191,8 @@ $this->params['breadcrumbs'][] = $this->title;
 								]); 
 		?>
 	  </div>
-
+	</div>
+	
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Order</label>
 	  <div class="controls">
@@ -173,14 +200,14 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 	</div>
 
-	<div class="control-group">
+	<div class="control-group no_disp_parent">
 	  <label class="control-label" for="textinput">Min</label>
 	  <div class="controls">
 		<input name="min" placeholder="" class="input-xlarge" type="text">
 	  </div>
 	</div>
 	
-	<div class="control-group">
+	<div class="control-group no_disp_parent">
 	  <label class="control-label" for="textinput">Max</label>
 	  <div class="controls">
 		<input name="max" placeholder="" class="input-xlarge" type="text">
@@ -221,7 +248,7 @@ $ajax_url['add'] = Url::to(['site/add-node']);
 $ajax_url['remove'] = Url::to(['site/remove-node']);
 $ajax_url['update'] = Url::to(['site/update-node']);
 $ajax_url['move'] = Url::to(['site/move-node']);
-
+$ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tree ID to the end of this URL '$recipe_id=1234'
 
 $script = <<< JS
 
@@ -234,16 +261,25 @@ $(document).ready(function() {
 	$("#add").prop("disabled",true);
 	$("#new").prop("disabled",true);
 	$("#save").prop("disabled",true);
+	$("#recipe_list").val(""); // set to the prompt
 	
 	setReadOnly(true); // inital state is read only
 	clearEdits();
 });
 
-// expand the tree by default on open
+// expand the tree by default on inital page open
 
 $('#treeview').on('loaded.jstree', function (event, data) {
 	$(this).jstree("open_all");
 });	
+
+// expand the tree on any refresh due to a reload by url change
+$('#treeview').bind('refresh.jstree', function(e, data) {
+    // invoked after jstree has loaded
+    $(this).jstree("open_all");
+});
+
+
 
 // check for integer only number
 function isIntNum(str)
@@ -261,9 +297,7 @@ function isFloatNum(str)
 
 function clearEdits()
 {
-	$("input[name=name]").val('');			
-	//$("input[name=weight]").val('');			
-	//$("input[name=spec_id]").val('');			
+	$("input[name=name]").val('');					
 	$("input[name=order]").val('');			
 	$("input[name=min]").val('');			
 	$("input[name=max]").val('');		
@@ -272,6 +306,19 @@ function clearEdits()
 	$("#weight_list").val('');	
 }
 
+function setEditFields(type)
+{
+	if(type == 'leaf')
+	{
+		$(".no_disp_parent").show();			
+	}
+	else
+	{
+		// root or parent nodes here
+		$(".no_disp_parent").hide();			
+
+	}
+}
 
 function setReadOnly(state)
 {
@@ -291,6 +338,24 @@ $("input[name=name]").on('input', function(event)
 {
 	
 });
+
+$('#recipe_list').on('change', function(event)
+{
+	id = $("#recipe_list").val();
+	
+	if(id == "")
+	{
+		$('#treeview').jstree(true).settings.core.data = ''; 	
+		$('#treeview').jstree(true).refresh();
+		return;
+	}
+	
+	url = '{$ajax_url['tree']}' + '&recipe_id=' + id;
+	
+	$('#treeview').jstree(true).settings.core.data = {'url' : url}; 	
+	$('#treeview').jstree(true).refresh();
+});
+
 
 $('#clear').on('click',function(event)
 {
@@ -702,6 +767,8 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 			// mess with some button states based on node type
 			// also if the node is 9999 might want to disable 
 			// some fields or other UI indicators
+				
+			setEditFields(node.node_type); // set field displable or not
 
 			if(node['spec_id'] == 9999)
 			{

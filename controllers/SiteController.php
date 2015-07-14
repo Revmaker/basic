@@ -167,7 +167,7 @@ class SiteController extends Controller
 	public function getWeights()
 	{
 		return [
-				['id'=> 0, 'weight'=>'0'],
+				['id'=> 0, 'weight'=>'Ignore'],
 				['id'=> 1, 'weight'=>'1'],
 				['id'=> 2, 'weight'=>'2'],
 				['id'=> 3, 'weight'=>'3'],
@@ -179,6 +179,16 @@ class SiteController extends Controller
 				['id'=> 9, 'weight'=>'9'],
 				['id'=> 10, 'weight'=>'10'],
 			];
+	}
+	
+	// return the list of recipies
+	public function getRecipes()
+	{
+		$recipes = (new Query())->select('id, name')->
+									from('{{%recipes}}')->
+									orderBy('name')->
+									all();
+		return $recipes;
 	}
 
 	// given a parent node, return a list of all children. This 
