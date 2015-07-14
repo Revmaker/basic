@@ -8,7 +8,7 @@ use yii\helpers\VarDumper;
 use yii\helpers\Url;
 
 /* @var $this yii\web\View */
-$this->title = 'About';
+$this->title = 'Recipe Editor';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
@@ -46,9 +46,7 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="site-about">
     <h1><?= Html::encode($this->title) ?></h1>
 
-    <p>
-        This is the About page. You may modify the following file to customize its content:
-    </p>
+    <p>Build a recipe here, then bake it to perfection</p>
 
 <div class="row">
 	<div class="tree-panel col-sm-7">
