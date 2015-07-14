@@ -15,16 +15,25 @@ $this->params['breadcrumbs'][] = $this->title;
  <style> 
 	.tree-panel { 
 		font-size:14px; 
-		border-style: inset;
+		border-style: solid;
+		border-radius : 10px;
 		padding :10px;
 		min-height:500px;
+		margin-right : 10px;
 	}
 	.edit-panel {
 		font-size:14px; 
-		border-style: inset;
+		border-style: solid;
+		border-radius : 10px;
 		padding :10px;
 		min-height:500px;
 	}
+	
+	.row {
+		display: flex; /* equal height of the children */
+	}
+
+
 </style>
    
 
@@ -37,7 +46,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="row">
 	<div class="tree-panel col-sm-7">
-	
 
 	<?= \yiidreamteam\jstree\JsTree::widget([
 		'containerOptions' => [
@@ -64,6 +72,10 @@ $this->params['breadcrumbs'][] = $this->title;
 				'root' => ['icon' => 'glyphicon glyphicon-folder-open']
 			],
 			'plugins' => ['dnd', 'types', 'contextmenu'],
+			'dnd' => ['check_while_dragging' => true],
+			
+			// for context menu you need to put into the component non quoted JS, so
+			// you must use the JsExpression, it does the rest.
 			'contextmenu' => [
 				'items' => new JsExpression('function ($node) {
                 return {
@@ -90,8 +102,8 @@ $this->params['breadcrumbs'][] = $this->title;
 
 	<br />
 	<div>
-		<button id="expand" class="btn btn-primary">Expand</button>
-		<button id="contract" class="btn btn-primary">Contract</button>	
+<!--		<button id="expand" class="btn btn-primary">Expand</button>
+		<button id="contract" class="btn btn-primary">Contract</button>	-->
 	</div>
 	</div> <!-- tree-panel-->
 	
@@ -511,7 +523,7 @@ $('#update').on('click',function(event)
 	
 	$.ajax({
 		url: '{$ajax_url['update']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
-		async: false,	// make non async call as the tree gets odd if we dont
+//		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id   : selected[0], 	// this is the node we want to update
@@ -561,7 +573,7 @@ $('#remove').on('click',function(event)
 	
 	$.ajax({
 		url: '{$ajax_url['remove']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
-		async: false,	// make non async call as the tree gets odd if we dont
+//		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id : selected[0]
@@ -706,19 +718,34 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	});		
 });
 
+function getNodeById(id)
+{
+	return $('#treeview').jstree(true).get_node(id);
+}
 
 $('#treeview').on("move_node.jstree", function (e, data) {
 
-   //console.log(data);
-   alert('Moving Node Id : ' + data.node.id + ' To Node Id : ' + data.parent);
-   
+	//console.log(data);
+    alert('Moving Node Id : ' + data.node.id + ' To Node Id : ' + data.parent);
+
+	// this gets the full json for the node
+	target_node = getNodeById(data.parent);
+
+	// this will change the drop target to the parent if dropping on
+	// a leaf. This will be a problem if ever doing drag/drop reordering
+	// but otherwise allows for better ui
+		
+    if(target_node.type === 'leaf')
+		target_id = target_node.parent;
+	else
+		target_id = data.parent;
+	
 	source_id = data.node.id;
-	target_id = data.parent;
 
 	$.ajax({
 		url: '{$ajax_url['move']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
-		async: false,	// make non async call as the tree gets odd if we dont
+//		async: false,	// make non async call as the tree gets odd if we dont
 		data: {
 			source_id : source_id,
 			target_id : target_id			
