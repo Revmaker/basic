@@ -34,7 +34,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		padding :10px;
 		height:600px;
 		margin-right : 10px;
-		overflow-y : scroll;
+		overflow-y : auto;
 	}
 
 	.edit-panel {
@@ -215,7 +215,6 @@ $this->params['breadcrumbs'][] = $this->title;
 	</div>
 	<br />
 
-	<button id="clear" class="btn btn-success">clear</button> 
 	<button id="save" class="btn btn-success">Save</button> 
 	<button id="cancel" class="btn btn-success">Cancel</button> 
 	<button id="add" class="btn btn-primary">Add</button>
@@ -354,13 +353,6 @@ $('#recipe_list').on('change', function(event)
 	
 	$('#treeview').jstree(true).settings.core.data = {'url' : url}; 	
 	$('#treeview').jstree(true).refresh();
-});
-
-
-$('#clear').on('click',function(event)
-{
-	event.preventDefault(); 
-	clearEdits();
 });
 
 function ExpandTree(obj)
