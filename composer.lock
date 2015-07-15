@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "8f96978233cd1d60070a74afac877e33",
+    "hash": "0abda9bc00ac54b70fc495a74428126d",
     "packages": [
         {
             "name": "bower-asset/bootstrap",
@@ -224,6 +224,36 @@
                     "package.json"
                 ]
             }
+        },
+        {
+            "name": "bower-asset/sweetalert",
+            "version": "v1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/t4t5/sweetalert.git",
+                "reference": "249e728a8e66190c3b55363f097af1f300cb273c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/t4t5/sweetalert/zipball/249e728a8e66190c3b55363f097af1f300cb273c",
+                "reference": "249e728a8e66190c3b55363f097af1f300cb273c",
+                "shasum": ""
+            },
+            "type": "bower-asset-library",
+            "extra": {
+                "bower-asset-main": [
+                    "dist/sweetalert.min.js",
+                    "dist/sweetalert.css"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "A beautiful replacement for JavaScript's alert.",
+            "keywords": [
+                "alert",
+                "modal"
+            ]
         },
         {
             "name": "bower-asset/yii2-pjax",
@@ -461,17 +491,57 @@
             "time": "2015-01-06 20:04:57"
         },
         {
-            "name": "yiisoft/yii2",
-            "version": "2.0.4",
+            "name": "yii2mod/yii2-sweet-alert",
+            "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "https://github.com/yiisoft/yii2-framework.git",
-                "reference": "726867caee3f23aa7a6975c801e64b6021e14f86"
+                "url": "https://github.com/yii2mod/yii2-sweet-alert.git",
+                "reference": "51f09c6c0435fc04e900e807ff4b94249a7ad19c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/yiisoft/yii2-framework/zipball/726867caee3f23aa7a6975c801e64b6021e14f86",
-                "reference": "726867caee3f23aa7a6975c801e64b6021e14f86",
+                "url": "https://api.github.com/repos/yii2mod/yii2-sweet-alert/zipball/51f09c6c0435fc04e900e807ff4b94249a7ad19c",
+                "reference": "51f09c6c0435fc04e900e807ff4b94249a7ad19c",
+                "shasum": ""
+            },
+            "require": {
+                "bower-asset/sweetalert": "*"
+            },
+            "type": "yii2-extension",
+            "autoload": {
+                "psr-4": {
+                    "yii2mod\\alert\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Igor Chepurnoy",
+                    "email": "igorzfort@gmail.com"
+                }
+            ],
+            "description": "Alert widget based on SweetAlert extension {@link http://tristanedwards.me/sweetalert)",
+            "keywords": [
+                "module",
+                "yii2"
+            ],
+            "time": "2015-06-17 09:41:08"
+        },
+        {
+            "name": "yiisoft/yii2",
+            "version": "2.0.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/yiisoft/yii2-framework.git",
+                "reference": "ea8c13b9f5cd437bd7bf73cad8a3457a155f3727"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/yiisoft/yii2-framework/zipball/ea8c13b9f5cd437bd7bf73cad8a3457a155f3727",
+                "reference": "ea8c13b9f5cd437bd7bf73cad8a3457a155f3727",
                 "shasum": ""
             },
             "require": {
@@ -546,7 +616,7 @@
                 "framework",
                 "yii2"
             ],
-            "time": "2015-05-10 20:09:47"
+            "time": "2015-07-11 02:37:59"
         },
         {
             "name": "yiisoft/yii2-bootstrap",
@@ -1004,9 +1074,9 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "stability-flags": [],
-    "prefer-stable": false,
+    "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": ">=5.4.0"
