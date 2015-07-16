@@ -190,7 +190,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 
 	<div class="control-group no_disp_parent">
-	  <label class="control-label" for="textinput">Spec Id</label>
+	  <label class="control-label" for="textinput">Specification</label>
 	  <div class="controls">
 		  
 		<?php
@@ -239,6 +239,8 @@ $this->params['breadcrumbs'][] = $this->title;
 	<div id="ajax_node_id"></div>
 	<div id="ajax_parent_id"></div>
 	<div id="ajax_status_msg"></div>
+	<div id="ajax_state"></div>
+	<div id="ajax_curr_parent"></div>
 	</div> <!-- edit-panel-->
 </div> <!-- row-->
 
@@ -261,7 +263,7 @@ $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tr
 $script = <<< JS
 
 var gEditState = 'browse';
-var gcurrParent = -1; // invalid
+var gCurrParent = -1; // invalid
 
 $(document).ready(function() {
 	
@@ -320,7 +322,6 @@ function setEditFields(type)
 	{
 		// root or parent nodes here
 		$(".no_disp_parent").hide();			
-
 	}
 }
 
@@ -340,40 +341,31 @@ function setReadOnly(state)
 // used to set state of the interface
 function setEditState(new_state)
 {
-	if(new_state == 'edit' && gEditState == 'edit')
+	if(new_state == 'new' && (gEditState == 'new' || gEditState == 'browse'))
 	{
-		setReadOnly(false); // inital state is read only
-		gEditState == 'edit';
+		gEditState = 'new';
 	}
 	else
-		if(new_state == 'edit' && gEditState == 'update')
+		if(new_state == 'new' && gEditState == 'update')
 		{
 			alert('Invalid new state. Current State of update can\'t transition to edit');
 			return;
 		}
 		else
-			if(new_state == 'browse' && (gEditState == 'edit' || gEditState == 'update'))
-			{
-				alert('edits not saved');
-				setReadOnly(true); // inital state is read only
-				gEditState == 'browse';		
-			}
-			else
-			{
-				setReadOnly(true); // inital state is read only
-				gEditState == 'browse';
-			}
+			gEditState = 'browse';	// all other cases to browse
 		
 		setButtonState(gEditState);	// update button to new state
 }
 
 function setButtonState(state)
 {
-	if(state == 'edit' || state == 'new')
+	if(state == 'update' || state == 'new')
 	{
 		$("#edit-state").html("Edit Mode");
+		setReadOnly(false);
 
 		$("#remove").prop("disabled",true);
+		$("#remove").hide();
 		
 		$("#new").prop("disabled", true);
 		$("#new").hide();
@@ -386,11 +378,14 @@ function setButtonState(state)
 		$("#cancel").show();
 		
 	}
-	else
+	else // browse mode
 	{
+		setReadOnly(true);
 		$("#edit-state").html("Browse Mode");
 
 		$("#remove").prop("disabled",false);
+		$("#remove").show();
+
 		$("#new").prop("disabled", false);
 		$("#new").show();
 		$("#edit").prop("disabled", false);
@@ -400,7 +395,6 @@ function setButtonState(state)
 		$("#save").hide();
 		$("#cancel").prop("disabled",true);
 		$("#cancel").hide();
-
 	}
 }
 
@@ -455,10 +449,14 @@ $('#new').on('click',function(event)
 {
 	event.preventDefault(); 
 
-	// should only be here IF on a parent node (spec_id == 9999)
+	if(gCurrParent == -1)
+	{
+		alert('no parent selected selected, please select a node in the tree')
+		return;
+	}
+
 	clearEdits();
-	setEditState('edit');
-	$("#save").prop("disabled",false);
+	setEditState('new');
 });
 
 $('#save').on('click',function(event)
@@ -466,6 +464,29 @@ $('#save').on('click',function(event)
 	event.preventDefault(); 
 	
 	// can be here if add or update save...
+	
+	if(gCurrState == 'new')
+	{
+		alert('Save the Record');
+	}
+	else
+		if(gCurrState == 'update')
+		{
+			alert('Update the Record');
+		}
+		else
+		{
+			alert('Unknown state. Can\'t save or update');
+		}
+
+		setEditState('browse');
+});
+
+$('#cancel').on('click',function(event)
+{
+	event.preventDefault(); 
+	alert('Changes Discarded');
+	setEditState('browse');
 });
 
 
@@ -480,7 +501,7 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 
 	if(data.selected.length == 0)
 	{
-		gcurrParent = -1;
+		gCurrParent = -1;
 		return;
 	}
 	
@@ -491,11 +512,11 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	if(data.node.type == 'leaf')
 	{
 		node = getNodeById(data.selected[0])
-		gcurrParent = node.parent;
+		gCurrParent = node.parent;
 	}
 	else // it parent or root
 	{
-		gcurrParent = data.selected[0]; // it a parent so can add to it if any child selected
+		gCurrParent = data.selected[0]; // it a parent so can add to it if any child selected
 	}
 	
 	// call the ajax function that gets a node.
@@ -534,6 +555,8 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 			$('#ajax_parent_id').html('Parent Id : ' + node.parent_id);
 			$('#ajax_status').html('Status : ' + node.status);
 			$('#ajax_status_msg').html('Status Message : ' + node.msg);
+			$('#ajax_state').html('Current State : ' + gEditState);
+			$('#ajax_curr_parent').html('Current State : ' + gCurrParent);
 			  
 			// these should both be 0, null is not good for the UI
 
