@@ -63,6 +63,17 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
 
+<?php echo \yii2mod\yii2-sweet-alert\Alert::widget([
+          'useSessionFlash' => false,
+          'options' => [
+               'title' => 'Success message',
+               'type' => 'Success',
+               'text' => "You will not be able to recover this imaginary file!",
+               'confirmButtonText'  => "Yes, delete it!",   
+               'cancelButtonText' =>  "No, cancel plx!"
+          ]
+]);
+?>
 	<div class="row">
 		<div class="recipe_select_panel col-sm-4">
 			<?php
@@ -76,7 +87,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 		</div>
 	</div>
-
 <div class="row">
 	<div class="tree-panel col-sm-7">
 

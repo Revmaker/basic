@@ -187,6 +187,7 @@ class SiteController extends Controller
 		$recipes = (new Query())->select('id, name')->
 									from('{{%recipes}}')->
 									orderBy('name')->
+									where(['active'=>'1'])->
 									all();
 		return $recipes;
 	}
@@ -202,7 +203,7 @@ class SiteController extends Controller
 		// get the list of all nodes with this parent id
 		$treedata = (new Query())->select('id, spec_id, parent_id')->
 									from('{{%attributes}}')->
-									where(['parent_id' => $parent_id])->
+									where(['parent_id' => $parent_id, 'active' => '1'])->
 									all();
 	
 		// add to the list, and call again with any potentials (recursive)
@@ -638,6 +639,165 @@ class SiteController extends Controller
 	// this function does not use the same status as the other
 	// ajax calls as I'm yet unable to make that work, so for now
 	// ship data exacly as JSTree needs
+	
+	public function ValidateTree($recipe_id, $quiet = true)
+    {
+
+		$jstree = []; 		// empty array for JSON
+		$node_list = [];	// keep list of all valid node id's
+		$tree_data = [];
+		
+		$msg = '<strong>Recipe Id : ' . $recipe_id . '</strong><br />';
+		
+		$a_index    = 0;
+		
+		if(($recipe_name = $this->getRecipeName($recipe_id)) === false)
+			return '<br />Invalid Recipe Id : ' . $recipe_id . '<br />' ;
+
+		if(($jstreedata = $this->getRecipeTree($recipe_id)) !== false)
+		{
+			foreach ($jstreedata as $row)
+			{
+				$id = $node_list[] = $jstree[$a_index]['id'] = $row['id'];	// save to the tree and to the list
+						
+				// the new 'type' sets a NODE type that can be used for icon display.
+				// may later be useful for Drag N' Drop					
+				
+				if ($row['parent_id'] == 0)
+				{
+					// if the root node then get the recipe name to the root as well
+					$jstree[$a_index]['parent'] = '#';	// jstree root is '#'
+					$jstree[$a_index]['text'] = $recipe_name;	// just show the recipe name for the root node
+					$jstree[$a_index]['type'] = 'root';
+					
+					$tree_data[$id]['parent'] = '#';
+					$tree_data[$id]['text'] = $recipe_name;
+					$tree_data[$id]['type'] = 'root';
+					
+				}
+				else
+				{
+					$jstree[$a_index]['parent'] = $row['parent_id'];
+					$jstree[$a_index]['text'] = $row['name'];
+
+					$tree_data[$id]['parent'] = $row['parent_id'];
+					$tree_data[$id]['text'] = $row['name'];
+	
+					// hack to determin node type, set icon type bootstrap glyphicon (see bootstrap)
+					
+					if($row['spec_id'] != 9999)	// 9999 is a magic number make a constant or someting more universal like NULL
+					{
+						$jstree[$a_index]['type'] = 'leaf';
+						$tree_data[$id]['type'] = 'leaf';
+					}
+					else
+					{
+						
+						$jstree[$a_index]['type'] = 'parent';
+						$tree_data[$id]['type'] = 'parent';
+					}
+				}            
+			   
+				$a_index ++;
+			}
+			
+		}// valid tree
+		else
+		{
+			return '<br />No Tree Data for : ' . $recipe_id . '<br />' ;
+		}		
+			
+
+		$found_root = false;
+		$empty_name = 0;
+		$empty_parent = 0;
+		$invalid_parent = 0;
+		$missing_parent = 0;
+		$invalid_parent_relationship = 0;
+
+		$msg = '<strong>Recipe Name : ' . $recipe_name . '</strong><br />';
+		
+		foreach($jstree as $node)
+		{
+			$curr_msg = '';
+			
+			// check for some obvious errors
+			
+			if($node['parent'] == '#')
+			{
+				$found_root = true;
+				if(!$quiet)
+					$curr_msg .= '<strong>I am grrROOT</strong>, ';
+			}
+			else
+			{
+				if(empty($node['parent']))
+				{
+					$empty_parent++;
+					$curr_msg .= '<strong>Empty Parent</strong>, ';
+				}
+
+				if(!is_numeric($node['parent']))
+				{
+					$invalid_parent++;
+					$curr_msg .= '<strong>Invalid Parent Data : ' . $node['parent'] . '</strong>, ';
+				}
+
+				// don't check root for parent
+				
+				$parent = $node['parent'];
+				
+				if(!in_array($parent, $node_list))
+				{
+					$missing_parent++;
+					$curr_msg .= '<strong>Missing Parent Id : ' . $parent . '</strong>, ';
+				}
+			}
+			
+			if(trim($node['text']) == '')
+			{
+				$empty_name++;
+				$curr_msg .= '<strong>Empty Name</strong>, ';
+			}
+			
+			// if not the root node, all nodes parent MUST be a parent (spec_id of 9999)
+			// must check to see if parent exists before doing this
+			
+			if($node['type'] != 'root' && isset($tree_data[$node['parent']]))
+			{
+				// check parent to see if root or parent type
+				
+				if(!($tree_data[$node['parent']]['type'] == 'parent' || $tree_data[$node['parent']]['type'] == 'root'))
+				{
+					$invalid_parent_relationship++;
+					
+					$curr_msg .= '<strong>Parent Node Id : ' . $node['parent'] . ' is not ROOT or a valid Parent</strong>, ';
+				}
+			}
+			
+			if(!$quiet || $curr_msg != '')
+			{
+				$msg .= 'Node Id : ' . $node['id'] . ' ' . $curr_msg;
+				$msg .= '<br />';
+			}
+		
+		}
+         
+		$msg .= '<br />';
+		if($found_root == false)
+			$msg .= 'ERROR ROOT NODE NOT FOUND<br />';
+		
+		$msg .= 'Summary -<br />';	
+		$msg .= 'Empty Name          : ' . $empty_name . '<br />';
+		$msg .= 'Empty Parent        : ' . $empty_parent . '<br />';
+		$msg .= 'Invalid Parent Data : ' . $invalid_parent . '<br />';
+		$msg .= 'Missing Parents     : ' . $missing_parent . '<br />';
+		$msg .= 'Invalid Parent Type : ' . $invalid_parent_relationship . '<br />';
+		
+		$msg .= '<br />';
+        return $msg;
+    }
+	
     public function actionTree()
     {
 		// gets the parameter recipe_id to load that particular recipe
@@ -667,7 +827,6 @@ class SiteController extends Controller
 				// -- by "#"
 				// ---------------------------------------------------------------------
 				
-				$jstreejson = [];
 				$a_index    = 0;
 				
 				foreach ($jstreedata as $row)
