@@ -63,7 +63,7 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
 
-<?php echo \yii2mod\yii2-sweet-alert\Alert::widget([
+<?php /* echo \yii2mod\yii2-sweet-alert\Alert::widget([
           'useSessionFlash' => false,
           'options' => [
                'title' => 'Success message',
@@ -72,7 +72,7 @@ $this->params['breadcrumbs'][] = $this->title;
                'confirmButtonText'  => "Yes, delete it!",   
                'cancelButtonText' =>  "No, cancel plx!"
           ]
-]);
+]);*/
 ?>
 	<div class="row">
 		<div class="recipe_select_panel col-sm-4">
@@ -151,7 +151,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	<form class="form-horizontal"> 
 	<fieldset>
 	<!-- Form Name -->
-	<legend>Edit Data Here</legend>
+	<legend id="edit-state">Edit Data Here</legend>
 
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Name</label>
@@ -184,7 +184,7 @@ $this->params['breadcrumbs'][] = $this->title;
 			$weights = $this->context->getWeights();
 					?>  
 		<?= Html::dropDownList('weight_list', '9999', ArrayHelper::map($weights, 'id', 'weight'), 
-								['id'=>'weight_list',
+								['id'=>'weight_list', 
 								]); 
 		?>
 	  </div>
@@ -225,12 +225,11 @@ $this->params['breadcrumbs'][] = $this->title;
 	</div>
 	<br />
 
-	<button id="save" class="btn btn-success">Save</button> 
-	<button id="cancel" class="btn btn-success">Cancel</button> 
-	<button id="add" class="btn btn-primary">Add</button>
 	<button id="new" class="btn btn-primary">New</button>
-	<button id="update" class="btn btn-primary">Update</button>
+	<button id="edit" class="btn btn-primary">Edit</button>
+	<button id="save" class="btn btn-success">Save</button> 
 	<button id="remove" class="btn btn-danger">Remove</button> 
+	<button id="cancel" class="btn btn-success">Cancel</button> 
 	
 	</fieldset>
 	</form>
@@ -261,19 +260,17 @@ $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tr
 
 $script = <<< JS
 
+var gEditState = 'browse';
+var gcurrParent = -1; // invalid
+
 $(document).ready(function() {
 	
 	// do some set up to get initial state of buttons, etc
-	
-	$("#remove").prop("disabled",true);
-	$("#update").prop("disabled",true);
-	$("#add").prop("disabled",true);
-	$("#new").prop("disabled",true);
-	$("#save").prop("disabled",true);
+
 	$("#recipe_list").val(""); // set to the prompt
-	
-	setReadOnly(true); // inital state is read only
+
 	clearEdits();
+	setEditState('browse');
 });
 
 // expand the tree by default on inital page open
@@ -287,8 +284,6 @@ $('#treeview').bind('refresh.jstree', function(e, data) {
     // invoked after jstree has loaded
     $(this).jstree("open_all");
 });
-
-
 
 // check for integer only number
 function isIntNum(str)
@@ -331,7 +326,6 @@ function setEditFields(type)
 
 function setReadOnly(state)
 {
-state = false ; // for testing
 	//input fields
 	$("input[name=name]").prop('readonly', state);
 	$("input[name=order]").prop('readonly', state);
@@ -343,10 +337,72 @@ state = false ; // for testing
 	$("#weight_list").attr("disabled", state); 
 }
 
-$("input[name=name]").on('input', function(event)
+// used to set state of the interface
+function setEditState(new_state)
 {
-	
-});
+	if(new_state == 'edit' && gEditState == 'edit')
+	{
+		setReadOnly(false); // inital state is read only
+		gEditState == 'edit';
+	}
+	else
+		if(new_state == 'edit' && gEditState == 'update')
+		{
+			alert('Invalid new state. Current State of update can\'t transition to edit');
+			return;
+		}
+		else
+			if(new_state == 'browse' && (gEditState == 'edit' || gEditState == 'update'))
+			{
+				alert('edits not saved');
+				setReadOnly(true); // inital state is read only
+				gEditState == 'browse';		
+			}
+			else
+			{
+				setReadOnly(true); // inital state is read only
+				gEditState == 'browse';
+			}
+		
+		setButtonState(gEditState);	// update button to new state
+}
+
+function setButtonState(state)
+{
+	if(state == 'edit' || state == 'new')
+	{
+		$("#edit-state").html("Edit Mode");
+
+		$("#remove").prop("disabled",true);
+		
+		$("#new").prop("disabled", true);
+		$("#new").hide();
+		$("#edit").prop("disabled", true);
+		$("#edit").hide();
+
+		$("#save").prop("disabled",false);
+		$("#save").show();
+		$("#cancel").prop("disabled",false);
+		$("#cancel").show();
+		
+	}
+	else
+	{
+		$("#edit-state").html("Browse Mode");
+
+		$("#remove").prop("disabled",false);
+		$("#new").prop("disabled", false);
+		$("#new").show();
+		$("#edit").prop("disabled", false);
+		$("#edit").show();
+
+		$("#save").prop("disabled",true);
+		$("#save").hide();
+		$("#cancel").prop("disabled",true);
+		$("#cancel").hide();
+
+	}
+}
 
 $('#recipe_list').on('change', function(event)
 {
@@ -374,10 +430,14 @@ function ContractTree(obj)
 {
 	$('#treeview').jstree('close_all');
 	$('#treeview').jstree('deselect_all');
-	
-	$("#remove").prop("disabled",true);
-	$("#update").prop("disabled",true);
 }
+
+// given a tree id, get the json object for it
+function getNodeById(id)
+{
+	return $('#treeview').jstree(true).get_node(id);
+}
+
 
 $('#expand').on('click',function(event)
 {
@@ -397,7 +457,7 @@ $('#new').on('click',function(event)
 
 	// should only be here IF on a parent node (spec_id == 9999)
 	clearEdits();
-	setReadOnly(false);
+	setEditState('edit');
 	$("#save").prop("disabled",false);
 });
 
@@ -406,6 +466,105 @@ $('#save').on('click',function(event)
 	event.preventDefault(); 
 	
 	// can be here if add or update save...
+});
+
+
+// capture things in the tree when a click happens
+// mainly the single selected (by config options) node
+
+$('#treeview').on('changed.jstree', function (e, data) 	{
+
+	// if we have nothing selected we can't do much, maybe some house keeping
+	
+	setEditState('browse');
+
+	if(data.selected.length == 0)
+	{
+		gcurrParent = -1;
+		return;
+	}
+	
+	// console.log(data.node.type); // show intern 'type' of node as set by JSON on load
+	
+	var json_node_type = data.node.type; // the type coming in from inital load
+	
+	if(data.node.type == 'leaf')
+	{
+		node = getNodeById(data.selected[0])
+		gcurrParent = node.parent;
+	}
+	else // it parent or root
+	{
+		gcurrParent = data.selected[0]; // it a parent so can add to it if any child selected
+	}
+	
+	// call the ajax function that gets a node.
+	
+	$.ajax({
+		url:	'{$ajax_url['node']}',	// match URL format for Yii, will be different if 'friendlyURL' is enabled
+		type: 	'post',
+
+		data: {		// data sent in post params
+					node_id : data.selected[0]	// the node id selected
+		},
+	   
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			// turn tree red, this is where communication failed or invalid
+			// data to the ajax call was sent.
+		},
+		   
+		success: function (data) {
+
+			// NON ZERO is an error, display and get out
+
+			node = data.data;		
+
+			if(data.status)
+			{
+				// specific data for this error, ie, node_id may not exist for other status
+				alert('Application Error ' + data.msg + ' Node Id : ' + node.node_id);
+				return;
+			}
+		
+			// debug display
+			$('#ajax_node_type').html('Node Type   : ' + node.node_type);
+			$('#ajax_json_type').html('JSON Type   : ' + json_node_type);
+			$('#ajax_node_id').html('Node Id   : ' + node.id);
+			$('#ajax_parent_id').html('Parent Id : ' + node.parent_id);
+			$('#ajax_status').html('Status : ' + node.status);
+			$('#ajax_status_msg').html('Status Message : ' + node.msg);
+			  
+			// these should both be 0, null is not good for the UI
+
+			if(node.min === null)
+				node.min = '0';
+
+			if(node['max'] === null)
+				node.max = '0';
+
+			// try stuffing some data to input fields
+
+			$("input[name=name]").val(node.name);			
+			//$("input[name=weight]").val(node.weight);			
+			$("#weight_list").val(node.weight);
+			
+			//$("input[name=spec_id]").val(node.spec_id);
+			
+			// set spec list box
+			$("#spec_list").val(node.spec_id);
+						
+			$("input[name=order]").val(node.order);			
+			$("input[name=min]").val(node.min);			
+			$("input[name=max]").val(node.max);			
+
+			// mess with some button states based on node type
+			// also if the node is 9999 might want to disable 
+			// some fields or other UI indicators
+				
+			setEditFields(node.node_type); // set field displable or not
+		}
+	});		
 });
 
 
@@ -677,124 +836,6 @@ $('#remove').on('click',function(event)
 		
 	});		
 });
-
-// capture things in the tree when a click happens
-// mainly the single selected (by config options) node
-
-$('#treeview').on('changed.jstree', function (e, data) 	{
-
-	// if we have nothing selected we can't do much, maybe some house keeping
-	if(data.selected.length == 0)
-	{
-		// Nothing selected, clear fields, form display, etc
-
-		$("#remove").prop("disabled",true);	// can remove if something selected
-		$("#update").prop("disabled",true);
-		$("#add").prop("disabled",true);
-		$("#new").prop("disabled",true);
-		$("#save").prop("disabled",true);
-
-		return;
-	}
-	
-	// console.log(data.node.type); // show intern 'type' of node as set by JSON on load
-	
-	var json_node_type = data.node.type; // the type coming in from inital load
-
-	// something selected now, enable some buttons
-	
-	$("#remove").prop("disabled",false);
-	$("#update").prop("disabled",false);
-		
-	// call the ajax function that gets a node.
-	
-	$.ajax({
-		url:	'{$ajax_url['node']}',	// match URL format for Yii, will be different if 'friendlyURL' is enabled
-		type: 	'post',
-
-		data: {		// data sent in post params
-					node_id : data.selected[0]	// the node id selected
-		},
-	   
-		error:	function(data) {
-			alert('Http Response : ' + data.responseText + ' Operation Failed');
-			// turn tree red, this is where communication failed or invalid
-			// data to the ajax call was sent.
-		},
-		   
-		success: function (data) {
-
-			// NON ZERO is an error, display and get out
-
-			node = data.data;		
-
-			if(data.status)
-			{
-				// specific data for this error, ie, node_id may not exist for other status
-				alert('Application Error ' + data.msg + ' Node Id : ' + node.node_id);
-				return;
-			}
-		
-			// debug display
-			$('#ajax_node_type').html('Node Type   : ' + node.node_type);
-			$('#ajax_json_type').html('JSON Type   : ' + json_node_type);
-			$('#ajax_node_id').html('Node Id   : ' + node.id);
-			$('#ajax_parent_id').html('Parent Id : ' + node.parent_id);
-			$('#ajax_status').html('Status : ' + node.status);
-			$('#ajax_status_msg').html('Status Message : ' + node.msg);
-			  
-			// these should both be 0, null is not good for the UI
-
-			if(node.min === null)
-				node.min = '0';
-
-			if(node['max'] === null)
-				node.max = '0';
-
-			// try stuffing some data to input fields
-
-			$("input[name=name]").val(node.name);			
-			//$("input[name=weight]").val(node.weight);			
-			$("#weight_list").val(node.weight);
-			
-			//$("input[name=spec_id]").val(node.spec_id);
-			
-			// set spec list box
-			$("#spec_list").val(node.spec_id);
-						
-			$("input[name=order]").val(node.order);			
-			$("input[name=min]").val(node.min);			
-			$("input[name=max]").val(node.max);			
-
-			// mess with some button states based on node type
-			// also if the node is 9999 might want to disable 
-			// some fields or other UI indicators
-				
-			setEditFields(node.node_type); // set field displable or not
-
-			if(node['spec_id'] == 9999)
-			{
-				$("#add").prop("disabled",false);
-				$("#new").prop("disabled",false);
-				setReadOnly(false);
-			}
-			else
-			{
-				$("#add").prop("disabled",true);
-				$("#new").prop("disabled",true);
-				
-				$("#save").prop("disabled",true);
-				setReadOnly(true);
-			}
-			
-		}
-	});		
-});
-
-function getNodeById(id)
-{
-	return $('#treeview').jstree(true).get_node(id);
-}
 
 $('#treeview').on("move_node.jstree", function (e, data) {
 
