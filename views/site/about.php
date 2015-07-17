@@ -183,7 +183,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		<?php
 			$weights = $this->context->getWeights();
 					?>  
-		<?= Html::dropDownList('weight_list', '9999', ArrayHelper::map($weights, 'id', 'weight'), 
+		<?= Html::dropDownList('weight_list', '0', ArrayHelper::map($weights, 'id', 'weight'), 
 								['id'=>'weight_list', 
 								]); 
 		?>
@@ -196,7 +196,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		<?php
 			$specs = $this->context->getSpecs();
 					?>  
-		<?= Html::dropDownList('spec_list', '9999', ArrayHelper::map($specs, 'id', 'spec_name'), 
+		<?= Html::dropDownList('spec_list', '', ArrayHelper::map($specs, 'id', 'spec_name'), 
 								['id'=>'spec_list',
 								]); 
 		?>
@@ -225,7 +225,8 @@ $this->params['breadcrumbs'][] = $this->title;
 	</div>
 	<br />
 
-	<button id="new" class="btn btn-primary">New</button>
+	<button id="new-leaf" class="btn btn-primary">New Leaf</button>
+	<button id="new-parent" class="btn btn-primary">New Parent</button>
 	<button id="edit" class="btn btn-primary">Edit</button>
 	<button id="save" class="btn btn-success">Save</button> 
 	<button id="remove" class="btn btn-danger">Remove</button> 
@@ -262,8 +263,10 @@ $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tr
 
 $script = <<< JS
 
-var gEditState = 'browse';
-var gCurrParent = -1; // invalid
+var gEditState = 'inactive';	// edit state new, update, browse
+var gEditType = 'inactive';		// current edit type, leaf or other 
+var gCurrParent = -1; 			// invalid for start
+var gCurrNode = -1; 			// invalid for start
 
 $(document).ready(function() {
 	
@@ -272,7 +275,7 @@ $(document).ready(function() {
 	$("#recipe_list").val(""); // set to the prompt
 
 	clearEdits();
-	setEditState('browse');
+	setEditState('inactive');
 });
 
 // expand the tree by default on inital page open
@@ -312,6 +315,7 @@ function clearEdits()
 	$("#weight_list").val('');	
 }
 
+// show either full edits for leaf or subset for parent/root
 function setEditFields(type)
 {
 	if(type == 'leaf')
@@ -323,6 +327,9 @@ function setEditFields(type)
 		// root or parent nodes here
 		$(".no_disp_parent").hide();			
 	}
+	
+	gEditType = type;
+
 }
 
 function setReadOnly(state)
@@ -341,18 +348,23 @@ function setReadOnly(state)
 // used to set state of the interface
 function setEditState(new_state)
 {
-	if(new_state == 'new' && (gEditState == 'new' || gEditState == 'browse'))
+	if(new_state == 'new')
 	{
 		gEditState = 'new';
 	}
 	else
-		if(new_state == 'new' && gEditState == 'update')
+		if(new_state == 'update')
 		{
-			alert('Invalid new state. Current State of update can\'t transition to edit');
-			return;
+			gEditState = 'update';
 		}
 		else
-			gEditState = 'browse';	// all other cases to browse
+			if(new_state == 'browse')
+			{
+				gEditState = 'browse';	// all other cases to browse
+			}
+			else
+				gEditState = 'inactive';	// new load or unknown state
+			
 		
 		setButtonState(gEditState);	// update button to new state
 }
@@ -361,14 +373,18 @@ function setButtonState(state)
 {
 	if(state == 'update' || state == 'new')
 	{
-		$("#edit-state").html("Edit Mode");
+		$("#edit-state").html((state == 'new')? "Add Mode" : "Edit Mode");
+		
 		setReadOnly(false);
 
 		$("#remove").prop("disabled",true);
 		$("#remove").hide();
 		
-		$("#new").prop("disabled", true);
-		$("#new").hide();
+		$("#new-leaf").prop("disabled", true);
+		$("#new-leaf").hide();
+		$("#new-parent").prop("disabled", true);
+		$("#new-parent").hide();
+
 		$("#edit").prop("disabled", true);
 		$("#edit").hide();
 
@@ -378,24 +394,41 @@ function setButtonState(state)
 		$("#cancel").show();
 		
 	}
-	else // browse mode
-	{
-		setReadOnly(true);
-		$("#edit-state").html("Browse Mode");
+	else 
+		if(state == 'browse') // browse mode
+		{
+			setReadOnly(true);
+			$("#edit-state").html("Browse Mode");
 
-		$("#remove").prop("disabled",false);
-		$("#remove").show();
+			$("#remove").prop("disabled",false);
+			$("#remove").show();
 
-		$("#new").prop("disabled", false);
-		$("#new").show();
-		$("#edit").prop("disabled", false);
-		$("#edit").show();
+			$("#new-leaf").prop("disabled", false);
+			$("#new-leaf").show();
+			$("#new-parent").prop("disabled", false);
+			$("#new-parent").show();
 
-		$("#save").prop("disabled",true);
-		$("#save").hide();
-		$("#cancel").prop("disabled",true);
-		$("#cancel").hide();
-	}
+			$("#edit").prop("disabled", false);
+			$("#edit").show();
+
+			$("#save").prop("disabled",true);
+			$("#save").hide();
+			$("#cancel").prop("disabled",true);
+			$("#cancel").hide();
+		}
+		else
+		{
+			setReadOnly(true);
+			$("#edit-state").html("Load Recipe");
+
+			$("#remove").hide();
+			$("#new-leaf").hide();
+			$("#new-parent").hide();
+			$("#edit").hide();
+			$("#save").hide();
+			$("#cancel").hide();
+		}
+		
 }
 
 $('#recipe_list').on('change', function(event)
@@ -445,7 +478,7 @@ $('#contract').on('click',function(event)
 	ContractTree(null);
 });
 
-$('#new').on('click',function(event)
+$('#new-leaf').on('click',function(event)
 {
 	event.preventDefault(); 
 
@@ -455,8 +488,40 @@ $('#new').on('click',function(event)
 		return;
 	}
 
+	setEditFields('leaf');
+
 	clearEdits();
 	setEditState('new');
+});
+
+$('#new-parent').on('click',function(event)
+{
+	event.preventDefault(); 
+
+	if(gCurrParent == -1)
+	{
+		alert('no parent selected selected, please select a node in the tree')
+		return;
+	}
+
+	setEditFields('parent');
+
+	clearEdits();
+	setEditState('new');
+});
+
+
+$('#edit').on('click',function(event)
+{
+	event.preventDefault(); 
+
+	if(gCurrParent == -1)
+	{
+		alert('no parent selected selected, please select a node in the tree to edit')
+		return;
+	}
+
+	setEditState('update');
 });
 
 $('#save').on('click',function(event)
@@ -465,14 +530,15 @@ $('#save').on('click',function(event)
 	
 	// can be here if add or update save...
 	
-	if(gCurrState == 'new')
+	if(gEditState == 'new')
 	{
 		alert('Save the Record');
+		addNode();
 	}
 	else
-		if(gCurrState == 'update')
+		if(gEditState == 'update')
 		{
-			alert('Update the Record');
+			updateNode();
 		}
 		else
 		{
@@ -487,36 +553,21 @@ $('#cancel').on('click',function(event)
 	event.preventDefault(); 
 	alert('Changes Discarded');
 	setEditState('browse');
+	
+	getNode(gCurrNode);
 });
 
 
 // capture things in the tree when a click happens
 // mainly the single selected (by config options) node
 
-$('#treeview').on('changed.jstree', function (e, data) 	{
+function getNode(node_id)
+{
 
-	// if we have nothing selected we can't do much, maybe some house keeping
-	
-	setEditState('browse');
-
-	if(data.selected.length == 0)
+	if(node_id == -1)
 	{
-		gCurrParent = -1;
+		alert('getNode() : Invalid node Id');
 		return;
-	}
-	
-	// console.log(data.node.type); // show intern 'type' of node as set by JSON on load
-	
-	var json_node_type = data.node.type; // the type coming in from inital load
-	
-	if(data.node.type == 'leaf')
-	{
-		node = getNodeById(data.selected[0])
-		gCurrParent = node.parent;
-	}
-	else // it parent or root
-	{
-		gCurrParent = data.selected[0]; // it a parent so can add to it if any child selected
 	}
 	
 	// call the ajax function that gets a node.
@@ -526,13 +577,14 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		type: 	'post',
 
 		data: {		// data sent in post params
-					node_id : data.selected[0]	// the node id selected
+					node_id : node_id	// the node id of interest
 		},
 	   
 		error:	function(data) {
 			alert('Http Response : ' + data.responseText + ' Operation Failed');
 			// turn tree red, this is where communication failed or invalid
 			// data to the ajax call was sent.
+			gCurrNode = -1;
 		},
 		   
 		success: function (data) {
@@ -541,22 +593,14 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 
 			node = data.data;		
 
+			gCurrNode = node.id; 
+			
 			if(data.status)
 			{
 				// specific data for this error, ie, node_id may not exist for other status
 				alert('Application Error ' + data.msg + ' Node Id : ' + node.node_id);
 				return;
 			}
-		
-			// debug display
-			$('#ajax_node_type').html('Node Type   : ' + node.node_type);
-			$('#ajax_json_type').html('JSON Type   : ' + json_node_type);
-			$('#ajax_node_id').html('Node Id   : ' + node.id);
-			$('#ajax_parent_id').html('Parent Id : ' + node.parent_id);
-			$('#ajax_status').html('Status : ' + node.status);
-			$('#ajax_status_msg').html('Status Message : ' + node.msg);
-			$('#ajax_state').html('Current State : ' + gEditState);
-			$('#ajax_curr_parent').html('Current State : ' + gCurrParent);
 			  
 			// these should both be 0, null is not good for the UI
 
@@ -587,35 +631,75 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 				
 			setEditFields(node.node_type); // set field displable or not
 		}
-	});		
+	});			
+}
+
+$('#treeview').on('changed.jstree', function (e, data) 	{
+
+	// if we have nothing selected we can't do much, maybe some house keeping
+	
+	setEditState('browse');
+
+	if(data.selected.length == 0)
+	{
+		gCurrParent = -1;
+		gCurrNode = -1;
+		return;
+	}
+	
+	// console.log(data.node.type); // show intern 'type' of node as set by JSON on load
+	
+	var json_node_type = data.node.type; // the type coming in from inital load
+	
+	if(data.node.type == 'leaf')
+	{
+		node = getNodeById(data.selected[0])
+		gCurrParent = node.parent;
+	}
+	else // it parent or root
+	{
+		gCurrParent = data.selected[0]; // it a parent so can add to it if any child selected
+	}
+	
+	// call the ajax function that gets a node.
+	
+	getNode(data.selected[0]);
 });
 
 
 // Add new node to the tree. Calls remote functions, tree refreshed
 // after add so no changes made to display unless successful
-$('#add').on('click',function(event)
+function addNode()
 {
-	event.preventDefault(); 
-
 	selected = $('#treeview').jstree('get_selected');	// implies single selection mode in tree
 	
 	if(selected.length == 0)
 	{
-		alert('Nothing Selected, can not add!');
+		alert('Nothing Selected, can\'t add!');
 		return;
 	}
 	
 	alert('Adding Node to Parent ' + selected[0]);
 
+	// these must be set for all node types
+	
 	name = $("input[name=name]").val();
-	//weight = $("input[name=weight]").val();
-	weight_id = $("#spec_list").val();
-	//spec_id = $("input[name=spec_id]").val();
-	spec_id = $("#spec_list").val();
-		
+	weight_id = $("#weight_list").val();
 	order = $("input[name=order]").val();
-	min = $("input[name=min]").val();
-	max = $("input[name=max]").val();
+
+	// if a leaf then these must also be set from the form
+	if(gEditType == 'leaf')
+	{
+		spec_id = $("#spec_list").val();
+		min = $("input[name=min]").val();
+		max = $("input[name=max]").val();
+	}
+	else
+	{	// parent/root values
+		spec_id = 9999;	// indicate it's a parent type
+		min = 0;
+		max = 0;
+	}
 	
 	name = name.trim(); // if your browser doesn't have this get a new browswer
 
@@ -698,12 +782,10 @@ $('#add').on('click',function(event)
 		},
 		
 	});		
-});
+}
 
-$('#update').on('click',function(event)
+function updateNode()
 {
-	event.preventDefault(); 
-
 	selected = $('#treeview').jstree('get_selected');	// implies single selection
 	
 	if(selected.length == 0)
@@ -718,11 +800,7 @@ $('#update').on('click',function(event)
 	// recipe id, all parms needed
 
 	name = $("input[name=name]").val();
-	//weight = $("input[name=weight]").val();
 	weight_id = $("#weight_list").val();
-	
-	// spec_id = $("input[name=spec_id]").val();
-	
 	spec_id = $("#spec_list").val();
 		
 	order = $("input[name=order]").val();
@@ -809,7 +887,7 @@ $('#update').on('click',function(event)
 		},
 
 	});		
-});
+}
 
 $('#remove').on('click',function(event)
 {
