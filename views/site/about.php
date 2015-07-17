@@ -13,8 +13,6 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 
  <style> 
-
-
 	.recipe_select_panel {
 		font-size:16px; 
 		border-style: solid;
@@ -142,8 +140,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 	<br />
 	<div>
-<!--		<button id="expand" class="btn btn-primary">Expand</button>
-		<button id="contract" class="btn btn-primary">Contract</button>	-->
 	</div>
 	</div> <!-- tree-panel-->
 	
@@ -267,6 +263,7 @@ var gEditState = 'inactive';	// edit state new, update, browse
 var gEditType = 'inactive';		// current edit type, leaf or other 
 var gCurrParent = -1; 			// invalid for start
 var gCurrNode = -1; 			// invalid for start
+var gCurrType = '';				// invalid for start
 
 $(document).ready(function() {
 	
@@ -464,22 +461,16 @@ function getNodeById(id)
 	return $('#treeview').jstree(true).get_node(id);
 }
 
-$('#expand').on('click',function(event)
-{
-	event.preventDefault(); 
-	ExpandTree(null);
-});
-
-$('#contract').on('click',function(event)
-{
-	event.preventDefault(); 
-	ContractTree(null);
-});
-
 $('#new-leaf').on('click',function(event)
 {
 	event.preventDefault(); 
 
+	if(gCurrType == 'leaf')
+	{
+		alert('Please Select a Parent Node as a target');
+		return;
+	}
+	
 	if(gCurrParent == -1)
 	{
 		alert('no parent selected selected, please select a node in the tree')
@@ -495,6 +486,12 @@ $('#new-leaf').on('click',function(event)
 $('#new-parent').on('click',function(event)
 {
 	event.preventDefault(); 
+
+	if(gCurrType == 'leaf')
+	{
+		alert('Please Select a Parent Node as a target');
+		return;
+	}
 
 	if(gCurrParent == -1)
 	{
@@ -583,6 +580,7 @@ function getNode(node_id)
 			// turn tree red, this is where communication failed or invalid
 			// data to the ajax call was sent.
 			gCurrNode = -1;
+			gCurrType = '';
 		},
 		   
 		success: function (data) {
@@ -596,7 +594,7 @@ function getNode(node_id)
 			if(data.status)
 			{
 				// specific data for this error, ie, node_id may not exist for other status
-				alert('Application Error ' + data.msg + ' Node Id : ' + node.node_id);
+				alert('Application Error : ' + data.msg + ' Node Id : ' + node.node_id);
 				return;
 			}
 			  
@@ -642,6 +640,7 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	{
 		gCurrParent = -1;
 		gCurrNode = -1;
+		gCurrType = '';
 		return;
 	}
 	
@@ -649,6 +648,7 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	
 	var json_node_type = data.node.type; // the type coming in from inital load
 	
+	gCurrType = data.node.type;
 	if(data.node.type == 'leaf')
 	{
 		node = getNodeById(data.selected[0])
@@ -740,7 +740,7 @@ function addNode()
 
 	// that parent id is enough to get the
 	// recipe id, all parms needed
-	
+		
 	$.ajax({
 		url: '{$ajax_url['add']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
@@ -757,11 +757,12 @@ function addNode()
 		success: function (data) {
 			node = data.data;
 
-			switch(data.status)
+			if(data.status != 0)
 			{
-				case 0:  break;	// no error
-				case 5:  alert('Application Error ' + data.msg + ', Node Id : ' + node.node_id); return;
-				default: alert('Unknown Application Error ' + data.msg); return;
+				alert('Application Error : ' + data.msg + ', Node Id : ' + node.node_id); 
+				
+				// on error might reset back to edit mode, need to check
+				return;
 			}
 		
 			$('#treeview').jstree('refresh');	// once added get the new data
@@ -772,7 +773,6 @@ function addNode()
 			// turn tree red, this is where communication failed or invalid
 			// data to the ajax call was sent.
 		},
-		
 	});		
 }
 
@@ -840,7 +840,6 @@ function updateNode()
 	
 	$.ajax({
 		url: '{$ajax_url['update']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
-//		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id   : selected[0], 	// this is the node we want to update
@@ -854,12 +853,10 @@ function updateNode()
 		success: function (data) {
 			node = data.data;
 
-			switch(data.status)
+			if(data.status != 0)
 			{
-				case 0:  break;	// no error
-				case 3:
-				case 4:  alert('Application Error ' + data.msg + ', Node Id : ' + node.node_id); return;
-				default: alert('Unknown Application Error ' + data.msg); return;
+				alert('Application Error : ' + data.msg + ', Node Id : ' + node.node_id); 
+				return;
 			}
 		
 			$('#treeview').jstree('refresh');
@@ -890,7 +887,6 @@ $('#remove').on('click',function(event)
 	
 	$.ajax({
 		url: '{$ajax_url['remove']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
-//		async: false,	// make non async call as the tree gets odd if we dont
 		type: 'post',
 		data: {
 			node_id : selected[0]
@@ -900,12 +896,10 @@ $('#remove').on('click',function(event)
 						
 			node = data.data;
 
-			switch(data.status)
+			if(data.status != 0)
 			{
-				case 0:  break;	// no error
-				case 1:
-				case 2:  alert('Application Error ' + data.msg + ',  Node Id : ' + node.node_id); return;
-				default: alert('Unknown Application Error ' + data.msg); return;
+				alert('Application Error :' + data.msg + ',  Node Id : ' + node.node_id); 
+				return;
 			}
 			
 			alert('Deleted ' + node.node_cnt + ' Nodes from the tree');
@@ -916,8 +910,6 @@ $('#remove').on('click',function(event)
 		
 		error:	function(data) {
 			alert('Http Response : ' + data.responseText + ' Operation Failed');
-			// turn tree red, this is where communication failed or invalid
-			// data to the ajax call was sent.
 		},
 		
 	});		
@@ -945,7 +937,6 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	$.ajax({
 		url: '{$ajax_url['move']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
-//		async: false,	// make non async call as the tree gets odd if we dont
 		data: {
 			source_id : source_id,
 			target_id : target_id			
@@ -955,19 +946,15 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 						
 			node = data.data;
 
-			switch(data.status)
+			if(data.status != 0)
 			{
-				case 0:  break;	// no error
-				case 6:  alert('Application Error ' + data.msg + ',  Source Id : ' + node.source_id + ' Target Id : ' + node.target_id); return;
-				default: alert('Unknown Application Error ' + data.msg); return;
+				alert('Application Error : ' + data.msg + ',  Source Id : ' + node.source_id + ' Target Id : ' + node.target_id);
+				return;
 			}
-	
 		},
 		
 		error:	function(data) {
 			alert('Http Response : ' + data.responseText + ' Operation Failed');
-			// turn tree red, this is where communication failed or invalid
-			// data to the ajax call was sent.
 		},
 		
 	});
