@@ -19,6 +19,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		border-radius : 10px;
 		padding :10px;
 		margin-bottom: 5px;
+		margin-right : 10px;
 	}
 	
 	#recipe_list {
@@ -82,6 +83,10 @@ $this->params['breadcrumbs'][] = $this->title;
 								'prompt' => '--Select Recipe--',
 								]); 
 			?>
+
+		</div>
+		<div class="recipe_select_panel col-sm-7">
+				<button id="new-recipe" class="btn btn-primary">New Leaf</button>
 
 		</div>
 	</div>
