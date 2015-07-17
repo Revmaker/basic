@@ -151,11 +151,13 @@ class SiteController extends Controller
     }
     
     // returns a list of the specs. Will return only active
-    // format is as an array of records
+    // format is as an array of records. don't bring back the 9999 spec id, it's not
+    // selectable by the user
     public function getSpecs()
     {
 		$specs = (new Query())->select('id, spec_name')->
 									from('{{%specs}}')->
+									where('id != :id', ['id'=>9999])->
 									orderBy('spec_name')->
 									all();
 		return $specs;
