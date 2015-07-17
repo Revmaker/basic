@@ -26,35 +26,38 @@ const JSON_RESP_INVALID_MOVE_DATA = 6;
 const JSON_RESP_SQL_ERROR = 7;
 const JSON_RESP_INVALID_RECIPE_ID = 8;
 const JSON_RESP_LEAF_TO_LEAF_INVALID = 9;
-const JSON_RESP_TARGET_NODE_INVALID = 10;
+const JSON_RESP_SOURCE_NODE_INVALID = 10;
 const JSON_RESP_TARGET_NODE_INVALID = 11;
 const JSON_RESP_DUPE_SPEC_IN_LEVEL = 12;
 const JSON_RESP_INVALID_ERROR = 99999;
 
-$JSON_RESP_MSG = [
-	JSON_RESP_OK => 'OK',
-	JSON_RESP_INVALID_NODE => 'Invalid Node Id',
-	JSON_RESP_NOTHING_TO_DELETE => 'Nothing To Delete',
-	JSON_RESP_INVALID_UPDATE_DATA => 'Invalid Update Data',
-	JSON_RESP_UPDATE_COUNT_INCONSISTENT => 'Update Count Inconsistent, should be 1, but it\'s more. Internal Error',
-	JSON_RESP_INVALID_ADD_DATA => 'Invalid Add Data',
-	JSON_RESP_INVALID_MOVE_DATA => 'Invalid Move Data',
-	JSON_RESP_SQL_ERROR => 'Internal Error, SQL Execution Failed',
-	JSON_RESP_INVALID_RECIPE_ID => 'Invalid Recipe Id',
-	JSON_RESP_LEAF_TO_LEAF_INVALID => 'Invalid Add, Can\'t Add Leaf to a Leaf',
-	JSON_RESP_TARGET_NODE_INVALID => 'SourceNode does not exist',
-	JSON_RESP_TARGET_NODE_INVALID => 'Target Node does not exist',
-	JSON_RESP_DUPE_SPEC_IN_LEVEL => 'Spec Already Exists in Level',
-	
-	JSON_RESP_INVALID_ERROR => 'Error of unknown type',
-];
+
 
 // get the error string for a particular JSON status response
-function getJSONStatus($error_id)
+function getJSONStatus($status_id)
 {
-	if(isset($JSON_RESP_MSG[$error_id]))
-		return($JSON_RESP_MSG[$error_id]);
-	return($JSON_RESP_MSG[JSON_RESP_INVALID_ERROR]);
+	$JSON_RESP_MSG = [
+		JSON_RESP_OK => 'OK',
+		JSON_RESP_INVALID_NODE => 'Invalid Node Id',
+		JSON_RESP_NOTHING_TO_DELETE => 'Nothing To Delete',
+		JSON_RESP_INVALID_UPDATE_DATA => 'Invalid Update Data',
+		JSON_RESP_UPDATE_COUNT_INCONSISTENT => 'Update Count Inconsistent, should be 1, but it\'s more. Internal Error',
+		JSON_RESP_INVALID_ADD_DATA => 'Invalid Add Data',
+		JSON_RESP_INVALID_MOVE_DATA => 'Invalid Move Data',
+		JSON_RESP_SQL_ERROR => 'Internal Error, SQL Execution Failed',
+		JSON_RESP_INVALID_RECIPE_ID => 'Invalid Recipe Id',
+		JSON_RESP_LEAF_TO_LEAF_INVALID => 'Invalid Add, Can\'t Add Leaf to a Leaf',
+		JSON_RESP_SOURCE_NODE_INVALID => 'Source Node does not exist',
+		JSON_RESP_TARGET_NODE_INVALID => 'Target Node does not exist',
+		JSON_RESP_DUPE_SPEC_IN_LEVEL => 'Spec Already Exists in Level',
+		
+		JSON_RESP_INVALID_ERROR => 'Error of unknown type',
+	];	
+
+	if(isset($JSON_RESP_MSG[$status_id]))
+		return $JSON_RESP_MSG[$status_id];
+		
+	return $JSON_RESP_MSG[JSON_RESP_INVALID_ERROR];
 }
 
 // here is the format for the response. This is what the 'other side' will
@@ -83,18 +86,7 @@ class SiteController extends Controller
 	
     public function behaviors()
     {
-        return [
-/*
-			[
-			'class' => Cors::className(),
-
-			'cors' => [
-					'Origin' => ['*'],
-					'Access-Control-Request-Method' => ['POST', 'GET', 'HEAD', 'OPTIONS'],
-				],
-			],
-		
-*/		
+        return [	
             'access' => [
                 'class' => AccessControl::className(),
                 'only' => ['logout'],
@@ -449,7 +441,7 @@ class SiteController extends Controller
 		$name = trim($name);
 	
 		if(!is_numeric($weight) || !is_numeric($order) || !is_numeric($target_id)  
-				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max))
+				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max) || empty($name))
 		{
 			$status = JSON_RESP_INVALID_ADD_DATA;
 			return false;
@@ -525,7 +517,7 @@ class SiteController extends Controller
 		$name = trim($name);
 	
 		if(!is_numeric($weight) || !is_numeric($order) || !is_numeric($node_id)  
-				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max))
+				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max) || empty($name))
 		{
 			$status = JSON_RESP_MSG_INVALID_UPDATE_DATA;
 			return false;
@@ -901,7 +893,6 @@ class SiteController extends Controller
         ]);
     }
     
-
 	// return a nodes worth of data
 	public function actionGetNode()
 	{
@@ -942,7 +933,7 @@ class SiteController extends Controller
 		// error data will be consistant with node_id and node_cnt for all cases
 		// 3 cases of status, OK, invaid node id, and nothing to delete are returned
 		
-		if(($count = $this->removeRecipeNode($node_id)) === false)
+		if(($count = $this->removeRecipeNode($node_id, $status)) === false)
 			$json_response = formatJSONResponse(JSON_RESP_INVALID_NODE, ['node_id' => $node_id, 'node_cnt' => $count]);
 		else
 		{
@@ -993,23 +984,19 @@ class SiteController extends Controller
 
 		$parent_id = $_POST['parent_id'];
 
-		$count = $this->addRecipeNode($parent_id, $_POST['spec_id'], 
-						$_POST['name'], $_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max']);
+		$count = $this->addRecipeNode($parent_id, $_POST['spec_id'], $_POST['name'], 
+			$_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max'], $status);
 
 		if($count === false || $count != 1)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_ADD_DATA, ['node_id' => $parent_id, 'node_cnt' => $count]);
+			$json_response = formatJSONResponse($status, ['node_id' => $parent_id, 'node_cnt' => $count]);
 		else
-		{
-			$json_response = formatJSONResponse(JSON_RESP_OK, ['node_id' => $parent_id, 'node_cnt' => $count]);
-		}
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['node_id' => $parent_id]);
 						
 	    return \Yii::createObject([
         'class' => 'yii\web\Response',
         'format' => \yii\web\Response::FORMAT_JSON,
         'data' => $json_response,
 		]);
-
-
 	}
 	
 	// update a node, needs all the db fields in question, will
@@ -1046,20 +1033,17 @@ class SiteController extends Controller
 
 		$node_id = $_POST['node_id'];
 		
-		$count = $this->updateRecipeNode($node_id, $_POST['spec_id'], 
-						$_POST['name'], $_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max'], $status);
+		$count = $this->updateRecipeNode($node_id, $_POST['spec_id'], $_POST['name'], 
+				$_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max'], $status);
 						
 		if($count === false)
 			$json_response = formatJSONResponse($status, ['node_id' => $node_id, 'node_cnt' => $count]);
 		else
 		{
-			// we had deleted datat it was a success, BUT if we tried to delete a node and it didn't delete then
-			// that is an error. Let the client decide what to do on it, could should always be one here
-			
 			if($count == 0 || $count == 1)	// allow for the count of 0 or 1 both are OK. A count of 0 likely indicates NO data was changed.
-				$json_response = formatJSONResponse(JSON_RESP_OK, JSON_RESP_MSG_OK, ['node_id' => $node_id, 'node_cnt' => $count]);
+				$json_response = formatJSONResponse(JSON_RESP_OK, ['node_id' => $node_id, 'node_cnt' => $count]);
 			else
-				$json_response = formatJSONResponse(JSON_RESP_UPDATE_COUNT_INCONSISTENT, JSON_RESP_MSG_UPDATE_COUNT_INCONSISTENT, ['node_id' => $node_id, 'node_cnt' => $count]);
+				$json_response = formatJSONResponse(JSON_RESP_UPDATE_COUNT_INCONSISTENT, ['node_id' => $node_id, 'node_cnt' => $count]);
 		}
 
 	    return \Yii::createObject([
@@ -1087,10 +1071,10 @@ class SiteController extends Controller
 		$source_id = $_POST['source_id'];
 		$target_id = $_POST['target_id'];
 		
-		if($this->moveRecipeNode($source_id, $target_id) === false)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_MOVE_DATA, JSON_RESP_MSG_INVALID_MOVE_DATA, ['source_id' => $source_id, 'target_id' => $target_id]);
+		if($this->moveRecipeNode($source_id, $target_id, $status) === false)
+			$json_response = formatJSONResponse($status, ['source_id' => $source_id, 'target_id' => $target_id]);
 		else
-			$json_response = formatJSONResponse(JSON_RESP_OK, JSON_RESP_MSG_OK, ['source_id' => $source_id, 'target_id' => $target_id]);
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['source_id' => $source_id, 'target_id' => $target_id]);
 
 	    return \Yii::createObject([
         'class' => 'yii\web\Response',
