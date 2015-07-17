@@ -428,7 +428,6 @@ function setButtonState(state)
 			$("#save").hide();
 			$("#cancel").hide();
 		}
-		
 }
 
 $('#recipe_list').on('change', function(event)
@@ -464,7 +463,6 @@ function getNodeById(id)
 {
 	return $('#treeview').jstree(true).get_node(id);
 }
-
 
 $('#expand').on('click',function(event)
 {
@@ -740,12 +738,6 @@ function addNode()
 		return;
 	}
 
-	if(parseFloat(min) > parseFloat(max))
-	{
-		alert('Invalid min/max range');
-		return;
-	}
-
 	// that parent id is enough to get the
 	// recipe id, all parms needed
 	
@@ -845,13 +837,6 @@ function updateNode()
 		alert('Invalid Max, must be numeric');
 		return;
 	}
-
-	if(parseFloat(min) > parseFloat(max))
-	{
-		alert('Invalid min/max range');
-		return;
-	}
-
 	
 	$.ajax({
 		url: '{$ajax_url['update']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
