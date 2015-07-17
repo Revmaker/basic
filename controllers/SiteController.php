@@ -17,20 +17,45 @@ const LEAF_NODE = 'leaf';
 
 // JSON Error codes and messages 
 const JSON_RESP_OK = 0;
-const JSON_RESP_MSG_OK = 'OK';
 const JSON_RESP_INVALID_NODE = 1;
-const JSON_RESP_MSG_INVALID_NODE = 'Invalid Node Id';
 const JSON_RESP_NOTHING_TO_DELETE = 2;
-const JSON_RESP_MSG_NOTHING_TO_DELETE = 'Nothing To Delete';
 const JSON_RESP_INVALID_UPDATE_DATA = 3;
-const JSON_RESP_MSG_INVALID_UPDATE_DATA = 'Invalid Update Data';
 const JSON_RESP_UPDATE_COUNT_INCONSISTENT = 4;
-const JSON_RESP_MSG_UPDATE_COUNT_INCONSISTENT = 'Update Count Inconsistent, should be 1, but it\'s more. Internal Error';
 const JSON_RESP_INVALID_ADD_DATA = 5;
-const JSON_RESP_MSG_INVALID_ADD_DATA = 'Invalid Add Data';
 const JSON_RESP_INVALID_MOVE_DATA = 6;
-const JSON_RESP_MSG_INVALID_MOVE_DATA = 'Invalid Move Data';
+const JSON_RESP_SQL_ERROR = 7;
+const JSON_RESP_INVALID_RECIPE_ID = 8;
+const JSON_RESP_LEAF_TO_LEAF_INVALID = 9;
+const JSON_RESP_TARGET_NODE_INVALID = 10;
+const JSON_RESP_TARGET_NODE_INVALID = 11;
+const JSON_RESP_DUPE_SPEC_IN_LEVEL = 12;
+const JSON_RESP_INVALID_ERROR = 99999;
 
+$JSON_RESP_MSG = [
+	JSON_RESP_OK => 'OK',
+	JSON_RESP_INVALID_NODE => 'Invalid Node Id',
+	JSON_RESP_NOTHING_TO_DELETE => 'Nothing To Delete',
+	JSON_RESP_INVALID_UPDATE_DATA => 'Invalid Update Data',
+	JSON_RESP_UPDATE_COUNT_INCONSISTENT => 'Update Count Inconsistent, should be 1, but it\'s more. Internal Error',
+	JSON_RESP_INVALID_ADD_DATA => 'Invalid Add Data',
+	JSON_RESP_INVALID_MOVE_DATA => 'Invalid Move Data',
+	JSON_RESP_SQL_ERROR => 'Internal Error, SQL Execution Failed',
+	JSON_RESP_INVALID_RECIPE_ID => 'Invalid Recipe Id',
+	JSON_RESP_LEAF_TO_LEAF_INVALID => 'Invalid Add, Can\'t Add Leaf to a Leaf',
+	JSON_RESP_TARGET_NODE_INVALID => 'SourceNode does not exist',
+	JSON_RESP_TARGET_NODE_INVALID => 'Target Node does not exist',
+	JSON_RESP_DUPE_SPEC_IN_LEVEL => 'Spec Already Exists in Level',
+	
+	JSON_RESP_INVALID_ERROR => 'Error of unknown type',
+];
+
+// get the error string for a particular JSON status response
+function getJSONStatus($error_id)
+{
+	if(isset($JSON_RESP_MSG[$error_id]))
+		return($JSON_RESP_MSG[$error_id]);
+	return($JSON_RESP_MSG[JSON_RESP_INVALID_ERROR]);
+}
 
 // here is the format for the response. This is what the 'other side' will
 // see when they get the data back. The status and messages are as above,
@@ -42,12 +67,12 @@ const JSON_RESP_MSG_INVALID_MOVE_DATA = 'Invalid Move Data';
 
 // simple helper to format the json response data
 // $data is an array, others are scalar values
-function formatJSONResponse($status, $msg, $data)
+function formatJSONResponse($status, $data)
 {
 	$resp = [];
 	
 	$resp['status'] = $status;
-	$resp['msg'] = $msg;
+	$resp['msg'] = getJSONStatus($status);	// get message
 	$resp['data'] = $data;
 	
 	return $resp;
@@ -183,7 +208,7 @@ class SiteController extends Controller
 			];
 	}
 	
-	// return the list of recipies
+	// return the list of recipies, must be active 
 	public function getRecipes()
 	{
 		$recipes = (new Query())->select('id, name')->
@@ -323,7 +348,7 @@ class SiteController extends Controller
 	// remove a recipe and all it's children. Can cause a lot of damage
 	// if used improperly 
 	// returns FALSE on fail, a count (may be 0) on success
-	public function removeRecipeAndNodes($recipe_id)
+	public function removeRecipeAndNodes($recipe_id, &$status)
 	{
 		// this does not need any fancy recursion since we have all nodes of a specific
 		// recipe tagged already with it. Delete the attribute nodes, then the recipe.
@@ -336,10 +361,47 @@ class SiteController extends Controller
 		}
 		catch(Exception $e)
 		{
+			$status = JSON_RESP_SQL_ERROR;
 			return false; // might be a problem
 		}
-
+			
+		$status = JSON_RESP_SQL_ERROR;
 		return $total_count;
+	}
+
+    // helper function give unique node_id it returns the record. Not sure
+    // if any reason to also  require the recipe_id since node_id's are 
+    // unique.
+    // Returns a row or false if no match.
+    // currently returns databank fields (id, parent_id, name, weight, spec_id, min, max, recipe_id)
+    // AND a synthesised field to indicate the node type (node_type)
+    // node_type - [parent | terminal] (change as needed and use a const)
+
+    public function getRecipeNode($node_id, &$status)
+    {
+		// this query is tricky for one reason in that while the one() option 
+		// specifies one record (row) it still will query and pull back internally
+		// all matching rows. The limit(1) ensures efficiency. 
+		
+		$node_data = (new Query())->select('id, parent_id, name, order, weight, spec_id, min, max, recipe_id')->
+							from('{{%attributes}}')->
+							where(['id' => $node_id])->
+							limit(1)->
+							one();
+									
+		if($node_data === false)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+			
+		if($node_data['spec_id'] == 9999)	// 9999 is a magic number 
+			$node_data['node_type'] = PARENT_NODE;
+		else 
+			$node_data['node_type'] = LEAF_NODE;
+			
+		$status = JSON_RESP_OK;
+		return $node_data;
 	}
 	
 	// removes node and all it's children. danger can cause a lot of deletions
@@ -347,7 +409,7 @@ class SiteController extends Controller
 	// transaction so all or nothing
 	// returns false if error, otherwise count of deleted nodes
 	
-	public function removeRecipeNode($node_id)
+	public function removeRecipeNode($node_id, &$status)
 	{
 		$children = [];
 		
@@ -366,9 +428,11 @@ class SiteController extends Controller
 		}
 		catch(Exception $e)
 		{
+			$status = JSON_RESP_SQL_ERROR;
 			return false;
 		}
 		
+		$status = JSON_RESP_SQL_ERROR;
 		return $count;
 	}
 
@@ -380,18 +444,23 @@ class SiteController extends Controller
 	// false if can't insert a new rec or
 	// the node id of the newly created node (NEED TO FIGURE THIS OUT...)
 
-	public function addRecipeNode($target_id, $spec_id, $name, $weight, $order, $min, $max)
+	public function addRecipeNode($target_id, $spec_id, $name, $weight, $order, $min, $max, &$status)
 	{
 		$name = trim($name);
 	
 		if(!is_numeric($weight) || !is_numeric($order) || !is_numeric($target_id)  
 				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max))
+		{
+			$status = JSON_RESP_INVALID_ADD_DATA;
 			return false;
-	
+		}
 		// get the parent nodes recipe, it better exist!
 		
-		if(($parent = $this->getRecipeNode($target_id)) === false)
+		if(($parent = $this->getRecipeNode($target_id, $status)) === false)
+		{
+			$status = JSON_RESP_TARGET_NODE_INVALID;
 			return false;
+		}	
 
 		$recipe_id = $parent['recipe_id'];	// must be the same recipe as the parent... Think about it
 		
@@ -399,12 +468,18 @@ class SiteController extends Controller
 		// I think this is minimally defined as a node with spec_id as '9999'
 		
 		if($parent['spec_id'] != 9999)		// MAGIC NUMBER MAKE CONSTANT!!! 
+		{
+			$status = JSON_RESP_LEAF_TO_LEAF_INVALID;
 			return false;					// this indicated you are trying to add a node to a leaf
-
-		// double check that the recipe exists
+		}
+		
+		// double check that the actual recipe exists
 		
 		if($this->getRecipeName($recipe_id) === false)
+		{
+			$status = JSON_RESP_INVALID_RECIPE_ID;
 			return false;
+		}
 		
 		// now triple check that the new node's spec_id does not exist in 
 		// the current level or child branches. This has one exception, allow
@@ -412,7 +487,10 @@ class SiteController extends Controller
 		
 		if($spec_id != 9999)
 			if($this->isExistingImmediateSpec($target_id, $spec_id))
-				return false;	
+			{
+				$status = JSON_RESP_DUPE_SPEC_IN_LEVEL;
+				return false;
+			}
 		
 		// OK, now add it!
  
@@ -433,28 +511,36 @@ class SiteController extends Controller
 		}
 		catch(Exception $e)
 		{
+			$status = JSON_RESP_SQL_ERROR;
 			return false;
 		}
 
+		$status = JSON_RESP_OK;
 		return $count;
 	}
 
 	// only updates data elements, no linkages
-	public function updateRecipeNode($node_id, $spec_id, $name, $weight, $order, $min, $max)
+	public function updateRecipeNode($node_id, $spec_id, $name, $weight, $order, $min, $max, &$status)
 	{
 		$name = trim($name);
 	
 		if(!is_numeric($weight) || !is_numeric($order) || !is_numeric($node_id)  
 				|| !is_numeric($spec_id)  || !is_numeric($min) || !is_numeric($max))
+		{
+			$status = JSON_RESP_MSG_INVALID_UPDATE_DATA;
 			return false;
-	
+		}
+		
 		// get the node. updates get tricky as you CANT change a spec_id if
 		// already set to 9999 (MAGIC). This could mess the tree up. So for now
 		// spec_id is IGNORED IF CURRENTLY SET TO 9999. Other fields may have implications
 		// if 9999, like min/max must be zero, etc...
 		
-		if(($node = $this->getRecipeNode($node_id)) === false)
+		if(($node = $this->getRecipeNode($node_id, $status)) === false)
+		{
+			$status = JSON_RESP_TARGET_NODE_INVALID;
 			return false;
+		}	
 
 		// might bounce if the incoming spec_id != 9999 as a mean thing to do if
 		// this is a parent node. Right now just override it and force to keep it's
@@ -479,7 +565,10 @@ class SiteController extends Controller
 		
 		if($spec_id != 9999)
 			if($this->isExistingImmediateSpec($node['parent_id'], $spec_id, $node_id))
-				return false;	
+			{
+				$status = JSON_RESP_DUPE_SPEC_IN_LEVEL;
+				return false;
+			}
 		
 		// OK, now update it! Count is tricky here since if the data is the exact same
 		// it will NOT return an count of 1, but rather a count of 0 since nothing was changed
@@ -500,9 +589,11 @@ class SiteController extends Controller
 		}
 		catch(Exception $e)
 		{
+			$status = JSON_RESP_SQL_ERROR;
 			return false;
 		}
 	
+		$status = JSON_RESP_OK;
 		return $count; // need to return the inserted record id at some point
 	}
 
@@ -534,73 +625,6 @@ class SiteController extends Controller
 
 		return true;
 	}
-	
-	// move a node ($source_id) to another parent ($target_id)
-	// initially will only move a $souce node to a target
-	// that is a parent type of node. Source nodes that are leafs
-	// can't be moved to other leafs. This might change as it may
-	// be OK as it might infer a reorder operation. But for now, 
-	// lets keep it simple
-	public function moveRecipeNode($source_id, $target_id)
-	{
-		if(($source_node = $this->getRecipeNode($source_id)) === false)
-			return false;
-
-		if(($target_node = $this->getRecipeNode($target_id)) === false)
-			return false;
-			
-		// OK both nodes exist now some validation
-		
-		// if node is not 9999 then it's not a potential candidate
-		if($target_node['spec_id'] != 9999) // MAGIC NUMBER FOR PARENT NODE TYPE
-			return false;
-			
-		// can't move the recipe root node 
-		if($source_node['parent_id'] == 0)
-			return false;
-			
-		// can't move to the same parent that is already set 
-		if($source_node['parent_id'] == $target_id)
-			return false;
-
-		// better safe then sorry
-		if($source_id == $target_id)
-			return false;
-
-		// make sure same recipe, can't move out of a recipe
-		if($source_node['recipe_id'] != $target_node['recipe_id'])
-			return false;
-			
-		// check to make sure we are not moving a node with the same
-		// spec ID to a branch with a pre existing spec that matches. 
-		// this is not checked for parent nodes which can nest anywhere
-		// except under a child.
-		
-		if($source_node['spec_id'] != 9999)
-			if($this->isExistingImmediateSpec($target_id, $source_node['spec_id']))
-				return false;	
-			
-		// This is the last check, you can never copy a source to a target
-		// where the target is a child of the source! This is a more costly
-		// check...
-		
-		$child_list = [];
-		if($this->getChildList($child_list, $source_id) === false)
-			return false;
-			
-		// oops, target is an ancestor of the source, no go	
-		if(in_array($target_id, $child_list))
-			return false;
-			
-		// Ok, now just change the paret of the source to the target
-		
-		if($this->updateRecipeParent($source_id, $target_id) === false)
-			return false;
-			
-		// success!
-		
-		return true;
-	}
 
 	// gets the name of a recipe given it's ID
 	// returns the string or false if not found
@@ -609,7 +633,7 @@ class SiteController extends Controller
 	//     'tablePrefix' => 'usen_', or what ever your prefix is ('brpt_')
 	public function getRecipeName($recipe_id)
 	{
-        $recipe_rec = (new Query())->select('id, name')->
+        $recipe_rec = (new Query())->select('name')->
 									 from('{{%recipes}}')->
 									 where(['id' => $recipe_id])->
 									 limit(1)->
@@ -620,7 +644,6 @@ class SiteController extends Controller
 			
 		return $recipe_rec['name'];
 	}
-
 
 	// need spec_id as it hints at node type (leaf/parent)
 	
@@ -642,6 +665,11 @@ class SiteController extends Controller
 	// ajax calls as I'm yet unable to make that work, so for now
 	// ship data exacly as JSTree needs
 	
+	// TBD 
+	// add fix mode which will create a NEW NODE. This node will
+	// hang off the root and be called '***INVALID-SPECS***'. All invalid
+	// nodes (nodes without valid parent) get attached to this. Then
+	// can be easily deleted by the recipe editor.
 	public function ValidateTree($recipe_id, $quiet = true)
     {
 
@@ -687,7 +715,7 @@ class SiteController extends Controller
 	
 					// hack to determin node type, set icon type bootstrap glyphicon (see bootstrap)
 					
-					if($row['spec_id'] != 9999)	// 9999 is a magic number make a constant or someting more universal like NULL
+					if($row['spec_id'] != 9999)	// 9999 is a magic number make a constant 
 					{
 						$jstree[$a_index]['type'] = 'leaf';
 						$tree_data[$id]['type'] = 'leaf';
@@ -708,7 +736,6 @@ class SiteController extends Controller
 		{
 			return '<br />No Tree Data for : ' . $recipe_id . '<br />' ;
 		}		
-			
 
 		$found_root = false;
 		$empty_name = 0;
@@ -816,19 +843,8 @@ class SiteController extends Controller
 		
 		if(($recipe_name = $this->getRecipeName($recipe_id)) !== false)
 		{
-
-			// ---------------------------------------------------------------------
-			// -- Get tree data from databank table brpt_attributes
-			// -- order by tree_id
-			// ---------------------------------------------------------------------
-			
 			if(($jstreedata = $this->getRecipeTree($recipe_id)) !== false)
 			{
-				// ---------------------------------------------------------------------
-				// -- Transform data to JSON format, replacing parent_id = 0 (top nodes)
-				// -- by "#"
-				// ---------------------------------------------------------------------
-				
 				$a_index    = 0;
 				
 				foreach ($jstreedata as $row)
@@ -885,38 +901,7 @@ class SiteController extends Controller
         ]);
     }
     
-    
-    // helper function give unique node_id it returns the record. Not sure
-    // if any reason to also  require the recipe_id since node_id's are 
-    // unique.
-    // Returns a row or false if no match.
-    // currently returns databank fields (id, parent_id, name, weight, spec_id, min, max, recipe_id)
-    // AND a synthesised field to indicate the node type (node_type)
-    // node_type - [parent | terminal] (change as needed and use a const)
 
-    public function getRecipeNode($node_id)
-    {
-		// this query is tricky for one reason in that while the one() option 
-		// specifies one record (row) it still will query and pull back internally
-		// all matching rows. The limit(1) ensures efficiency. 
-		
-		$node_data = (new Query())->select('id, parent_id, name, order, weight, spec_id, min, max, recipe_id')->
-							from('{{%attributes}}')->
-							where(['id' => $node_id])->
-							limit(1)->
-							one();
-									
-		if($node_data === false)
-			return false;
-			
-		if($node_data['spec_id'] == 9999)	// 9999 is a magic number make a constant or someting more universal like NULL
-			$node_data['node_type'] = PARENT_NODE;
-		else 
-			$node_data['node_type'] = LEAF_NODE;
-			
-		return $node_data;
-	}
-	
 	// return a nodes worth of data
 	public function actionGetNode()
 	{
@@ -930,10 +915,10 @@ class SiteController extends Controller
 
 		$node_id = $_POST['node_id'];
 		
-		if(($node_data = $this->getRecipeNode($node_id)) === false)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_NODE, JSON_RESP_MSG_INVALID_NODE, ['node_id' => $node_id]);
+		if(($node_data = $this->getRecipeNode($node_id, $status)) === false)
+			$json_response = formatJSONResponse(JSON_RESP_INVALID_NODE, ['node_id' => $node_id]);
 		else
-			$json_response = formatJSONResponse(JSON_RESP_OK, JSON_RESP_MSG_OK, $node_data);
+			$json_response = formatJSONResponse(JSON_RESP_OK, $node_data);
 
 	    return \Yii::createObject([
         'class' => 'yii\web\Response',
@@ -958,16 +943,16 @@ class SiteController extends Controller
 		// 3 cases of status, OK, invaid node id, and nothing to delete are returned
 		
 		if(($count = $this->removeRecipeNode($node_id)) === false)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_NODE, JSON_RESP_MSG_INVALID_NODE, ['node_id' => $node_id, 'node_cnt' => $count]);
+			$json_response = formatJSONResponse(JSON_RESP_INVALID_NODE, ['node_id' => $node_id, 'node_cnt' => $count]);
 		else
 		{
 			// we had deleted datat it was a success, BUT if we tried to delete a node and it didn't delete then
 			// that is an error. Let the client decide what to do on it
 			
 			if($count > 0)
-				$json_response = formatJSONResponse(JSON_RESP_OK, JSON_RESP_MSG_OK, ['node_id' => $node_id, 'node_cnt' => $count]);
+				$json_response = formatJSONResponse(JSON_RESP_OK, ['node_id' => $node_id, 'node_cnt' => $count]);
 			else
-				$json_response = formatJSONResponse(JSON_RESP_NOTHING_TO_DELETE, JSON_RESP_MSG_NOTHING_TO_DELETE, ['node_id' => $node_id, 'node_cnt' => $count]);
+				$json_response = formatJSONResponse(JSON_RESP_NOTHING_TO_DELETE, ['node_id' => $node_id, 'node_cnt' => $count]);
 		}
 		
 	    return \Yii::createObject([
@@ -1012,10 +997,10 @@ class SiteController extends Controller
 						$_POST['name'], $_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max']);
 
 		if($count === false || $count != 1)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_ADD_DATA, JSON_RESP_MSG_INVALID_ADD_DATA, ['node_id' => $parent_id, 'node_cnt' => $count]);
+			$json_response = formatJSONResponse(JSON_RESP_INVALID_ADD_DATA, ['node_id' => $parent_id, 'node_cnt' => $count]);
 		else
 		{
-			$json_response = formatJSONResponse(JSON_RESP_OK, JSON_RESP_MSG_OK, ['node_id' => $parent_id, 'node_cnt' => $count]);
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['node_id' => $parent_id, 'node_cnt' => $count]);
 		}
 						
 	    return \Yii::createObject([
@@ -1062,10 +1047,10 @@ class SiteController extends Controller
 		$node_id = $_POST['node_id'];
 		
 		$count = $this->updateRecipeNode($node_id, $_POST['spec_id'], 
-						$_POST['name'], $_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max']);
+						$_POST['name'], $_POST['weight'], $_POST['order'], $_POST['min'], $_POST['max'], $status);
 						
 		if($count === false)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_UPDATE_DATA, JSON_RESP_MSG_INVALID_UPDATE_DATA, ['node_id' => $node_id, 'node_cnt' => $count]);
+			$json_response = formatJSONResponse($status, ['node_id' => $node_id, 'node_cnt' => $count]);
 		else
 		{
 			// we had deleted datat it was a success, BUT if we tried to delete a node and it didn't delete then
