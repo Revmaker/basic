@@ -13,7 +13,7 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 
  <style> 
-	.recipe_select_panel {
+	.recipe_select_panel, .recipe_add_panel{
 		font-size:16px; 
 		border-style: solid;
 		border-radius : 10px;
@@ -21,9 +21,14 @@ $this->params['breadcrumbs'][] = $this->title;
 		margin-bottom: 5px;
 		margin-right : 10px;
 	}
+
+	.recipe_add_panel {
+		margin-right : 0px;
+		margin-left  : 0px;
+	}
 	
 	#recipe_list {
-		width : 100%;
+		width : 80%;
 	}
 	
 	.tree-panel { 
@@ -84,10 +89,21 @@ $this->params['breadcrumbs'][] = $this->title;
 								]); 
 			?>
 
+			<button id="new-recipe" class="btn btn-primary">New</button>
 		</div>
-		<div class="recipe_select_panel col-sm-7">
-				<button id="new-recipe" class="btn btn-primary">New Leaf</button>
-
+		<div class="recipe_add_panel col-sm-8">
+			<div class="form-inline">
+			  <div class="form-group">
+				<label for="recipe_name">Recipe Name</label>
+				<input type="text" class="form-control" id="recipe_name" placeholder="Some Name Here">
+			  </div>
+			  <div class="form-group">
+				<label for="recipe_author">Author</label>
+				<input type="text" class="form-control" id="recipe_author" placeholder="Haystack Calhoon">
+			  </div>
+			  <button id="save-recipe" class="btn btn-primary">Save</button>
+			  <button id="cancel-recipe" class="btn btn-warning">Cancel</button>
+			</div>				
 		</div>
 	</div>
 <div class="row">
@@ -161,22 +177,6 @@ $this->params['breadcrumbs'][] = $this->title;
 	  </div>
 	</div>
 
-<!--
-	<div class="control-group">
-	  <label class="control-label" for="textinput">Weight</label>
-	  <div class="controls">
-		<input name="weight" placeholder="" class="input-xlarge" type="text">
-	  </div>
-	</div>
-
-	<div class="control-group">
-	  <label class="control-label" for="textinput">Spec Id</label>
-	  <div class="controls">
-		<input name="spec_id" placeholder="" class="input-xlarge" type="text">
-	  </div>
-	</div>
--->	
-
 	<div class="control-group">
 	  <label class="control-label" for="textinput">Weight</label>
 	  <div class="controls">
@@ -231,18 +231,10 @@ $this->params['breadcrumbs'][] = $this->title;
 	<button id="edit" class="btn btn-primary">Edit</button>
 	<button id="save" class="btn btn-success">Save</button> 
 	<button id="remove" class="btn btn-danger">Remove</button> 
-	<button id="cancel" class="btn btn-success">Cancel</button> 
+	<button id="cancel" class="btn btn-warning">Cancel</button> 
 	
 	</fieldset>
 	</form>
-	<!-- debug fields -->
-	<div id="ajax_node_type"></div>
-	<div id="ajax_json_type"></div>
-	<div id="ajax_node_id"></div>
-	<div id="ajax_parent_id"></div>
-	<div id="ajax_status_msg"></div>
-	<div id="ajax_state"></div>
-	<div id="ajax_curr_parent"></div>
 	</div> <!-- edit-panel-->
 </div> <!-- row-->
 
@@ -466,6 +458,23 @@ function getNodeById(id)
 	return $('#treeview').jstree(true).get_node(id);
 }
 
+// event handlers for buttons
+
+$('#new-recipe').on('click',function(event)
+{
+	alert('Nice Try');
+});
+
+$('#save-recipe').on('click',function(event)
+{
+	alert('Wishful Thinking');
+});
+
+$('#cancel-recipe').on('click',function(event)
+{
+	alert('Hold Your Horses...');
+});
+
 $('#new-leaf').on('click',function(event)
 {
 	event.preventDefault(); 
@@ -483,9 +492,16 @@ $('#new-leaf').on('click',function(event)
 	}
 
 	setEditFields('leaf');
-
 	clearEdits();
 	setEditState('new');
+	
+	// set some defaults
+	
+	$("#weight_list").val('0');
+	$("input[name=order]").val('10');
+	$("input[name=min]").val('0');
+	$("input[name=max]").val('0');
+
 });
 
 $('#new-parent').on('click',function(event)
@@ -508,6 +524,8 @@ $('#new-parent').on('click',function(event)
 
 	clearEdits();
 	setEditState('new');
+	$("#weight_list").val('0');
+	$("input[name=order]").val('10');
 });
 
 
@@ -614,7 +632,6 @@ function getNode(node_id)
 			// try stuffing some data to input fields
 
 			$("input[name=name]").val(node.name);			
-			//$("input[name=weight]").val(node.weight);			
 			$("#weight_list").val(node.weight);
 			
 			//$("input[name=spec_id]").val(node.spec_id);
@@ -806,43 +823,55 @@ function updateNode()
 
 	name = name.trim(); // if your browser doesn't have this get a new browswer
 
+	// validate common
+
 	if(name.length == 0)
 	{
 		alert('Error, name Can\'t be empty');
 		return;
 	}
-	
-	// validate numbers
+
 	if(!isIntNum(weight_id))
 	{
 		alert('Invalid Weight, must be integer');
 		return;
 	}
-	
-	if(!isIntNum(spec_id))
-	{
-		alert('Invalid Spec Id, must be integer');
-		return;
-	}
-	
+
 	if(!isIntNum(order))
 	{
 		alert('Invalid Order, must be integer');
 		return;
 	}
 
-	if(!isFloatNum(min))
+	// validate and set defaults for all values if not leaf
+	
+	if(gCurrType == 'leaf')
 	{
-		alert('Invalid Min, must be numeric');
-		return;
+		if(!isIntNum(spec_id))
+		{
+			alert('Invalid Spec Id, must be integer');
+			return;
+		}
+		
+		if(!isFloatNum(min))
+		{
+			alert('Invalid Min, must be numeric');
+			return;
+		}
+		
+		if(!isFloatNum(max))
+		{
+			alert('Invalid Max, must be numeric');
+			return;
+		}
+	}
+	else
+	{
+		spec_id = 9999; // force this
+		min = max = 0; 	// all zeros
 	}
 	
-	if(!isFloatNum(max))
-	{
-		alert('Invalid Max, must be numeric');
-		return;
-	}
-	
+
 	$.ajax({
 		url: '{$ajax_url['update']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
