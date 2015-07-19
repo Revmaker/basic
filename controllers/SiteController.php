@@ -644,7 +644,7 @@ class SiteController extends Controller
 		$jstreedata = (new Query())->select('id, parent_id, name, spec_id')->
 									from('{{%attributes}}')->
 									where(['recipe_id' => $recipe_id])->
-									orderBy('name')->
+									orderBy('order')->
 									all();
 		if(count($jstreedata) == 0)
 			return false;
