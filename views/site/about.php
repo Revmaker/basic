@@ -955,7 +955,7 @@ $('#remove').on('click',function(event)
 
 			if(data.status != 0)
 			{
-				alert('Application Error :' + data.msg + ',  Node Id : ' + node.node_id); 
+				alert('Application Error : ' + data.msg + ',  Node Id : ' + node.node_id); 
 				return;
 			}
 			
