@@ -29,6 +29,7 @@ const JSON_RESP_LEAF_TO_LEAF_INVALID = 9;
 const JSON_RESP_SOURCE_NODE_INVALID = 10;
 const JSON_RESP_TARGET_NODE_INVALID = 11;
 const JSON_RESP_DUPE_SPEC_IN_LEVEL = 12;
+const JSON_RESP_DELETE_ROOT_NOT_ALLOWED = 13;
 const JSON_RESP_INVALID_ERROR = 99999;
 
 
@@ -50,6 +51,7 @@ function getJSONStatus($status_id)
 		JSON_RESP_SOURCE_NODE_INVALID => 'Source Node does not exist',
 		JSON_RESP_TARGET_NODE_INVALID => 'Target Node does not exist',
 		JSON_RESP_DUPE_SPEC_IN_LEVEL => 'Spec Already Exists in Level',
+		JSON_RESP_DELETE_ROOT_NOT_ALLOWED => 'Delete Root Node of Recipe is Not Allowed',
 		
 		JSON_RESP_INVALID_ERROR => 'Error of unknown type',
 	];	
@@ -468,12 +470,29 @@ class SiteController extends Controller
 	// needs error return codes, might be best to set this as a 
 	// transaction so all or nothing
 	// returns false if error, otherwise count of deleted nodes
+	// NOTE : this should not allow root node to be deleted
 	
 	public function removeRecipeNode($node_id, &$status)
 	{
 		$children = [];
 		
 		$this->getChildList($children, $node_id);
+		
+		
+		if(($del_candidate = $this->getRecipeNode($node_id, $status)) === false)
+		{
+			$status = JSON_RESP_NOTHING_TO_DELETE;
+			return false;
+		}
+		
+		// can never remove the root node of the tree, this can only
+		// be done by the remove recipe function
+		
+		if($del_candidate['parent_id'] == 0)
+		{
+			$status = JSON_RESP_DELETE_ROOT_NOT_ALLOWED;
+			return false;
+		}
 		
 		$children[] = $node_id;	// tricky, now add the parent node at the end of the list
 		
@@ -1002,7 +1021,7 @@ class SiteController extends Controller
 		// 3 cases of status, OK, invaid node id, and nothing to delete are returned
 		
 		if(($count = $this->removeRecipeNode($node_id, $status)) === false)
-			$json_response = formatJSONResponse(JSON_RESP_INVALID_NODE, ['node_id' => $node_id, 'node_cnt' => $count]);
+			$json_response = formatJSONResponse($status, ['node_id' => $node_id, 'node_cnt' => $count]);
 		else
 		{
 			// we had deleted datat it was a success, BUT if we tried to delete a node and it didn't delete then
