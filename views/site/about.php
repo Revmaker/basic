@@ -91,11 +91,17 @@ $this->params['breadcrumbs'][] = $this->title;
 
 			<button id="new-recipe" class="btn btn-primary">New</button>
 		</div>
-		<div class="recipe_add_panel col-sm-8">
+	</div>
+<div class="row">
+		<div id="recipe_add_panel" class="recipe_add_panel col-sm-12">
 			<div class="form-inline">
 			  <div class="form-group">
 				<label for="recipe_name">Recipe Name</label>
 				<input type="text" class="form-control" id="recipe_name" placeholder="Some Name Here">
+			  </div>
+			  <div class="form-group">
+				<label for="recipe_description">Description</label>
+				<input type="text" class="form-control" id="recipe_description" size="35" placeholder="Important recipe">
 			  </div>
 			  <div class="form-group">
 				<label for="recipe_author">Author</label>
@@ -105,7 +111,7 @@ $this->params['breadcrumbs'][] = $this->title;
 			  <button id="cancel-recipe" class="btn btn-warning">Cancel</button>
 			</div>				
 		</div>
-	</div>
+</div>	
 <div class="row">
 	<div class="tree-panel col-sm-7">
 
@@ -252,6 +258,7 @@ $ajax_url['add'] = Url::to(['site/add-node']);
 $ajax_url['remove'] = Url::to(['site/remove-node']);
 $ajax_url['update'] = Url::to(['site/update-node']);
 $ajax_url['move'] = Url::to(['site/move-node']);
+$ajax_url['add-recipe'] = Url::to(['site/add-recipe']);
 $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tree ID to the end of this URL '$recipe_id=1234'
 
 $script = <<< JS
@@ -270,6 +277,7 @@ $(document).ready(function() {
 
 	clearEdits();
 	setEditState('inactive');
+	$("#recipe_add_panel").hide();	// hide the recipe panel
 });
 
 // expand the tree by default on inital page open
@@ -308,6 +316,14 @@ function clearEdits()
 	$("#spec_list").val('9999');
 	$("#weight_list").val('');	
 }
+
+function clearRecipeEdits()
+{
+	$("#recipe_name").val('');	
+	$("#recipe_author").val('');
+	$("#recipe_description").val('');
+}
+
 
 // show either full edits for leaf or subset for parent/root
 function setEditFields(type)
@@ -424,9 +440,17 @@ function setButtonState(state)
 		}
 }
 
+// set the tree to the new recipe id and refreshes (loads)
+function updateTreeURL(id)
+{
+	var url = '{$ajax_url['tree']}' + '&recipe_id=' + id;
+	$('#treeview').jstree(true).settings.core.data = {'url' : url}; 	
+	$('#treeview').jstree(true).refresh();
+}
+
 $('#recipe_list').on('change', function(event)
 {
-	id = $("#recipe_list").val();
+	var id = $("#recipe_list").val();
 	
 	if(id == "")
 	{
@@ -434,11 +458,8 @@ $('#recipe_list').on('change', function(event)
 		$('#treeview').jstree(true).refresh();
 		return;
 	}
-	
-	url = '{$ajax_url['tree']}' + '&recipe_id=' + id;
-	
-	$('#treeview').jstree(true).settings.core.data = {'url' : url}; 	
-	$('#treeview').jstree(true).refresh();
+
+	updateTreeURL(id);
 });
 
 function ExpandTree(obj)
@@ -462,17 +483,19 @@ function getNodeById(id)
 
 $('#new-recipe').on('click',function(event)
 {
-	alert('Nice Try');
+	$("#recipe_add_panel").show();
 });
 
 $('#save-recipe').on('click',function(event)
 {
-	alert('Wishful Thinking');
+	alert('Saving Recipe and Creating Root Node');
+	addRecipe();
 });
 
 $('#cancel-recipe').on('click',function(event)
 {
-	alert('Hold Your Horses...');
+	$("#recipe_add_panel").hide();
+	clearRecipeEdits();
 });
 
 $('#new-leaf').on('click',function(event)
@@ -703,22 +726,22 @@ function addNode()
 
 	// these must be set for all node types
 	
-	name = $("input[name=name]").val();
-	weight_id = $("#weight_list").val();
-	order = $("input[name=order]").val();
+	var name = $("input[name=name]").val();
+	var weight_id = $("#weight_list").val();
+	var order = $("input[name=order]").val();
 
 	// if a leaf then these must also be set from the form
 	if(gEditType == 'leaf')
 	{
-		spec_id = $("#spec_list").val();
-		min = $("input[name=min]").val();
-		max = $("input[name=max]").val();
+		var spec_id = $("#spec_list").val();
+		var min = $("input[name=min]").val();
+		var max = $("input[name=max]").val();
 	}
 	else
 	{	// parent/root values
-		spec_id = 9999;	// indicate it's a parent type
-		min = 0;
-		max = 0;
+		var spec_id = 9999;	// indicate it's a parent type
+		var min = 0;
+		var max = 0;
 	}
 	
 	name = name.trim(); // if your browser doesn't have this get a new browswer
@@ -813,13 +836,13 @@ function updateNode()
 	// that parent id is enough to get the
 	// recipe id, all parms needed
 
-	name = $("input[name=name]").val();
-	weight_id = $("#weight_list").val();
-	spec_id = $("#spec_list").val();
+	var name = $("input[name=name]").val();
+	var weight_id = $("#weight_list").val();
+	var spec_id = $("#spec_list").val();
 		
-	order = $("input[name=order]").val();
-	min = $("input[name=min]").val();
-	max = $("input[name=max]").val();
+	var order = $("input[name=order]").val();
+	var min = $("input[name=min]").val();
+	var max = $("input[name=max]").val();
 
 	name = name.trim(); // if your browser doesn't have this get a new browswer
 
@@ -997,6 +1020,66 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	$('#treeview').jstree('open_all');
 	clearEdits();
 });
+
+
+function addRecipe()
+{
+	
+	alert('Adding New Recipe');
+
+	// these must be set for all node types
+	
+	var name = $("#recipe_name").val();	
+	var author = $("#recipe_author").val();
+	var description = $("#recipe_description").val();
+	
+	name = name.trim(); // if your browser doesn't have this get a new browswer
+	author = author.trim();
+	
+	if(name.length == 0)
+	{
+		alert('Error, Recipe Name Can\'t be empty');
+		return;
+	}
+
+	if(author.length == 0)
+	{
+		alert('Error, Author Can\'t be empty');
+		return;
+	}
+		
+	$.ajax({
+		url: '{$ajax_url['add-recipe']}',
+		type: 'post',
+		data: {
+			name        : name,
+			description : description,
+			author	    : author
+		},
+
+		success: function (data) {
+			info = data.data;
+
+			if(data.status != 0)
+			{
+				alert('Application Error : ' + data.msg); 
+				return;
+			}
+
+			var id = info.recipe_id;
+			updateTreeURL(id);	// update the tree, refresh, reload etc
+			
+			// $('#treeview').jstree('refresh');	// once added get the new data
+			// update the tree url to the new recipe which should just have the root node
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			// turn tree red, this is where communication failed or invalid
+			// data to the ajax call was sent.
+		},
+	});		
+}
 
 JS;
 $this->registerJs($script, view::POS_END);
