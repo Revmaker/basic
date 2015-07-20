@@ -337,6 +337,73 @@ class SiteController extends Controller
 		return in_array($spec_id, $spec_list);
 	}
 
+	// adds a new recipe, creates the initial attribute root node. 
+	// false on failure, otherwise the new recipe id
+	public function addRecipe($name, $description, $author, &$status)
+	{
+		// check some params
+		
+		if(empty($name) || empty($description) || empty($author))
+		{
+			$status = JSON_RESP_INVALID_ADD_DATA;
+			return false;
+		}
+		
+		// create the new record with active status
+		
+		// this whole mess should be in a transaction so if the recipe
+		// succedes and the attribute failes the entire mess should be
+		// rolled back.
+		try
+		{
+			$count = Yii::$app->db->createCommand()->insert('{{%recipes}}', 
+					[	// insert fields
+						'name'=>$name, 
+						'description' => $description,
+						'author' => $author,
+						'active' => 1,
+					]
+			)->execute();
+		}
+		catch(Exception $e)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+		
+		// this is the tricky part. Essentially gets the last autoinc id from an insert on 
+		// the current connection, which hopefully is what we just did!
+		
+		$recipe_id = Yii::$app->db->getSchema()->getLastInsertID();
+		
+		// now we have the record need to add the attribute with proper data
+		// OK, now add it!
+ 
+		try
+		{
+			$count = Yii::$app->db->createCommand()->insert('{{%attributes}}', 
+					[	// insert fields
+						'name'=> 'Total Score', 
+						'weight' => '',
+						'order' => 0,
+						'parent_id' => 0,
+						'spec_id' => 9999,
+						'recipe_id' => $recipe_id,
+						'min'=>0,
+						'max'=>0,
+					]
+			)->execute();
+		}
+		catch(Exception $e)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+		
+		$status = JSON_RESP_OK;
+		return $recipe_id;
+	}
+
 	// remove a recipe and all it's children. Can cause a lot of damage
 	// if used improperly 
 	// returns FALSE on fail, a count (may be 0) on success
@@ -360,6 +427,7 @@ class SiteController extends Controller
 		$status = JSON_RESP_SQL_ERROR;
 		return $total_count;
 	}
+
 
     // helper function give unique node_id it returns the record. Not sure
     // if any reason to also  require the recipe_id since node_id's are 
@@ -1004,7 +1072,6 @@ class SiteController extends Controller
 		
 	public function actionUpdateNode()
 	{
-
 		if (!Yii::$app->request->isAjax)
 			throw new \yii\web\MethodNotAllowedHttpException;
 		
@@ -1082,5 +1149,33 @@ class SiteController extends Controller
         'data' => $json_response,
 		]);
 	}
-	
+
+	// adds a new recipe and all that it entails
+	public function actionAddRecipe()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+		
+		// do some checking
+			
+		if(!isset($_POST['name']))
+			throw new \yii\web\BadRequestHttpException;
+
+		if(!isset($_POST['description']))
+			throw new \yii\web\BadRequestHttpException;
+
+		if(!isset($_POST['author']))
+			throw new \yii\web\BadRequestHttpException;
+
+		if(($recipe_id = $this->addRecipe(trim($_POST['name']), trim($_POST['description']), trim($_POST['author']), $status)) === false)
+			$json_response = formatJSONResponse($status, []);
+		else
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $recipe_id]);
+
+	    return \Yii::createObject([
+        'class' => 'yii\web\Response',
+        'format' => \yii\web\Response::FORMAT_JSON,
+        'data' => $json_response,
+		]); 
+	}
 }
