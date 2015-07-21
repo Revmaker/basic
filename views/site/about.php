@@ -361,6 +361,8 @@ function setRecipeState(new_state)
 			gCurrRecipeState = 'update';
 		else
 			gCurrRecipeState = 'inactive';
+			
+	setRecipeControlState(gCurrRecipeState);
 }
 
 // used to set state of the interface
@@ -385,6 +387,24 @@ function setEditState(new_state)
 			
 		
 		setButtonState(gEditState);	// update button to new state
+}
+
+function setRecipeControlState(state)
+{
+	if(state == 'inactive')
+	{
+		// show list and buttons
+		$("#new-recipe").prop("disabled",false);
+		$("#edit-recipe").prop("disabled",false);
+		$("#recipe_list").prop("disabled",false);
+	}
+	else
+	{
+		// no changes until cancel or save
+		$("#new-recipe").prop("disabled",true);
+		$("#edit-recipe").prop("disabled",true);
+		$("#recipe_list").prop("disabled",true);
+	}
 }
 
 function setButtonState(state)
@@ -469,6 +489,7 @@ $('#recipe_list').on('change', function(event)
 	}
 
 	gCurrRecipe = id;	// save the current always!
+	setRecipeState('inactive');	// can select new or edit
 	updateTreeURL(id);
 });
 
@@ -549,6 +570,11 @@ $('#save-recipe').on('click',function(event)
 		{
 			alert('Unknown Recipe state, reload page');
 		}
+		
+	// state of controls set in resulting call to add/updateRecipe() if
+	// and ONLY if a successful operation went down. otherwise
+	// state will remain in the new/update state which keeps buttons
+	// and dropdown disabled. Cancel or successful save resets
 });
 
 $('#cancel-recipe').on('click',function(event)
@@ -557,6 +583,7 @@ $('#cancel-recipe').on('click',function(event)
 	showRecipeEdit(false);
 	clearRecipeEdits();
 	showTreeEdit(true);
+	setRecipeState('inactive'); // if here reset
 });
 
 $('#new-leaf').on('click',function(event)
@@ -1162,13 +1189,12 @@ function addRecipe()
 				var id = info.recipe_id;
 
 				updateTreeURL(id);	// update the tree, refresh, reload etc
-				
-				// if success go back to tree work, otherwise says on recipe edit until cancel or successful save
 				showRecipeEdit(false);
 				refreshRecipeList(id);
 				showTreeEdit(true);
 				clearRecipeEdits();
 				gCurrRecipe = id;		// update global
+				setRecipeState('inactive'); // if here reset so buttons OK
 			}
 		},
 		
@@ -1229,12 +1255,9 @@ function updateRecipe()
 				gCurrRecipe = -1;
 				showRecipeEdit(false);
 				showTreeEdit(true);
-				
 			}
 			else
 			{
-				// don't need to do much here
-				alert('Update of Recipe is OK');
 				// if success go back to tree work, otherwise says on recipe edit until cancel or successful save
 
 				updateTreeURL(id);	// update the tree, refresh, reload etc
@@ -1243,7 +1266,7 @@ function updateRecipe()
 				showTreeEdit(true);
 				clearRecipeEdits();
 				gCurrRecipe = id;		// update global
-
+				setRecipeState('inactive'); // if here reset so buttons OK
 			}
 		},
 		
