@@ -28,7 +28,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	}
 	
 	#recipe_list {
-		width : 80%;
+		width : 70%;
 	}
 	
 	.tree-panel { 
@@ -79,40 +79,40 @@ $this->params['breadcrumbs'][] = $this->title;
 ]);*/
 ?>
 	<div class="row">
-		<div class="recipe_select_panel col-sm-4">
+		<div class="recipe_select_panel col-sm-5">
 			<?php
-				$specs = $this->context->getRecipes();
-
-				echo Html::dropDownList('recipe_list', '', ArrayHelper::map($specs, 'id', 'name'), 
+				$recipes = $this->context->getRecipes();
+				echo Html::dropDownList('recipe_list', '', $recipes, 
 								['id'=>'recipe_list',
 								'prompt' => '--Select Recipe--',
 								]); 
 			?>
 
 			<button id="new-recipe" class="btn btn-primary">New</button>
+			<button id="edit-recipe" class="btn btn-primary">Edit</button>
 		</div>
 	</div>
-<div class="row">
-		<div id="recipe_add_panel" class="recipe_add_panel col-sm-12">
-			<div class="form-inline">
-			  <div class="form-group">
-				<label for="recipe_name">Recipe Name</label>
-				<input type="text" class="form-control" id="recipe_name" placeholder="Some Name Here">
-			  </div>
-			  <div class="form-group">
-				<label for="recipe_description">Description</label>
-				<input type="text" class="form-control" id="recipe_description" size="35" placeholder="Important recipe">
-			  </div>
-			  <div class="form-group">
-				<label for="recipe_author">Author</label>
-				<input type="text" class="form-control" id="recipe_author" placeholder="Haystack Calhoon">
-			  </div>
-			  <button id="save-recipe" class="btn btn-primary">Save</button>
-			  <button id="cancel-recipe" class="btn btn-warning">Cancel</button>
-			</div>				
-		</div>
-</div>	
-<div class="row">
+	<div class="row">
+			<div id="recipe_add_panel" class="recipe_add_panel col-sm-12">
+				<div class="form-inline">
+				  <div class="form-group">
+					<label for="recipe_name">Recipe Name</label>
+					<input type="text" class="form-control" id="recipe_name" placeholder="Some Name Here">
+				  </div>
+				  <div class="form-group">
+					<label for="recipe_description">Description</label>
+					<input type="text" class="form-control" id="recipe_description" size="35" placeholder="Important recipe">
+				  </div>
+				  <div class="form-group">
+					<label for="recipe_author">Author</label>
+					<input type="text" class="form-control" id="recipe_author" placeholder="Haystack Calhoon">
+				  </div>
+				  <button id="save-recipe" class="btn btn-primary">Save</button>
+				  <button id="cancel-recipe" class="btn btn-warning">Cancel</button>
+				</div>				
+			</div>
+	</div>	
+	<div id="recipe-tree" class="row">
 	<div class="tree-panel col-sm-7">
 
 	<?= \yiidreamteam\jstree\JsTree::widget([
@@ -163,8 +163,6 @@ $this->params['breadcrumbs'][] = $this->title;
 		]
 	])
 	?>
-		
-
 	<br />
 	<div>
 	</div>
@@ -259,6 +257,9 @@ $ajax_url['remove'] = Url::to(['site/remove-node']);
 $ajax_url['update'] = Url::to(['site/update-node']);
 $ajax_url['move'] = Url::to(['site/move-node']);
 $ajax_url['add-recipe'] = Url::to(['site/add-recipe']);
+$ajax_url['get-recipe']= Url::to(['site/get-recipe']);
+$ajax_url['update-recipe']= Url::to(['site/update-recipe']);
+$ajax_url['get-recipes']= Url::to(['site/get-recipes']);
 $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tree ID to the end of this URL '$recipe_id=1234'
 
 $script = <<< JS
@@ -268,6 +269,8 @@ var gEditType = 'inactive';		// current edit type, leaf or other
 var gCurrParent = -1; 			// invalid for start
 var gCurrNode = -1; 			// invalid for start
 var gCurrType = '';				// invalid for start
+var gCurrRecipe = -1;			// invalid for start
+var gCurrRecipeState = 'inactive'; // current edit state inactive, new or update
 
 $(document).ready(function() {
 	
@@ -329,17 +332,11 @@ function clearRecipeEdits()
 function setEditFields(type)
 {
 	if(type == 'leaf')
-	{
 		$(".no_disp_parent").show();			
-	}
 	else
-	{
-		// root or parent nodes here
-		$(".no_disp_parent").hide();			
-	}
+		$(".no_disp_parent").hide();	// root or parent nodes here
 	
 	gEditType = type;
-
 }
 
 function setReadOnly(state)
@@ -353,6 +350,17 @@ function setReadOnly(state)
 	// drop down lists
 	$("#spec_list").attr("disabled", state); 
 	$("#weight_list").attr("disabled", state); 
+}
+
+function setRecipeState(new_state)
+{
+	if(new_state == 'new')
+		gCurrRecipeState = 'new';
+	else
+		if(new_state == 'update')
+			gCurrRecipeState = 'update';
+		else
+			gCurrRecipeState = 'inactive';
 }
 
 // used to set state of the interface
@@ -456,9 +464,11 @@ $('#recipe_list').on('change', function(event)
 	{
 		$('#treeview').jstree(true).settings.core.data = ''; 	
 		$('#treeview').jstree(true).refresh();
+		id = -1;
 		return;
 	}
 
+	gCurrRecipe = id;	// save the current always!
 	updateTreeURL(id);
 });
 
@@ -479,23 +489,74 @@ function getNodeById(id)
 	return $('#treeview').jstree(true).get_node(id);
 }
 
+function showRecipeEdit(show)
+{
+	if(show)
+		$("#recipe_add_panel").show();
+	else
+		$("#recipe_add_panel").hide();
+}
+
+function showTreeEdit(show)
+{
+	if(show)
+		$("#recipe-tree").show();
+	else
+		$("#recipe-tree").hide();
+}
+
 // event handlers for buttons
 
 $('#new-recipe').on('click',function(event)
 {
-	$("#recipe_add_panel").show();
+
+	setRecipeState('new');
+	showRecipeEdit(true);
+	showTreeEdit(false);
+});
+
+$('#edit-recipe').on('click',function(event)
+{
+
+	id = $("#recipe_list").val();
+	
+	if(id < 1 || id == "")
+	{
+		alert('Please Select a Recipe to Edit');
+		setRecipeState('inactive');
+		return;
+	}
+	setRecipeState('update');
+	showRecipeEdit(true);
+	getRecipe(id);
+	showTreeEdit(false);
 });
 
 $('#save-recipe').on('click',function(event)
 {
-	alert('Saving Recipe and Creating Root Node');
-	addRecipe();
+	if(gCurrRecipeState == 'new')
+	{
+		alert('Saving Recipe and Creating Root Node');
+		addRecipe();
+	}
+	else
+		if(gCurrRecipeState == 'update')
+		{
+			alert('Updating Recipe ID : ' + gCurrRecipe);
+			updateRecipe();	 // gCurrRecipe has the active ID
+		}
+		else
+		{
+			alert('Unknown Recipe state, reload page');
+		}
 });
 
 $('#cancel-recipe').on('click',function(event)
 {
-	$("#recipe_add_panel").hide();
+	alert('Changes Discarded');
+	showRecipeEdit(false);
 	clearRecipeEdits();
+	showTreeEdit(true);
 });
 
 $('#new-leaf').on('click',function(event)
@@ -633,7 +694,7 @@ function getNode(node_id)
 
 			// NON ZERO is an error, display and get out
 
-			node = data.data;		
+			var node = data.data;		
 
 			gCurrNode = node.id; 
 			
@@ -800,7 +861,7 @@ function addNode()
 		},
 
 		success: function (data) {
-			node = data.data;
+			var node = data.data;
 
 			if(data.status != 0)
 			{
@@ -893,7 +954,6 @@ function updateNode()
 		spec_id = 9999; // force this
 		min = max = 0; 	// all zeros
 	}
-	
 
 	$.ajax({
 		url: '{$ajax_url['update']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
@@ -908,7 +968,7 @@ function updateNode()
 			max		  : max
 		},
 		success: function (data) {
-			node = data.data;
+			var node = data.data;
 
 			if(data.status != 0)
 			{
@@ -951,7 +1011,7 @@ $('#remove').on('click',function(event)
 		
 		success: function (data) {
 						
-			node = data.data;
+			var node = data.data;
 
 			if(data.status != 0)
 			{
@@ -1001,7 +1061,7 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 		
 		success: function (data) {
 						
-			node = data.data;
+			var node = data.data;
 
 			if(data.status != 0)
 			{
@@ -1021,11 +1081,111 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	clearEdits();
 });
 
+function getRecipe(recipe_id)
+{
+	$.ajax({
+		url: '{$ajax_url['get-recipe']}',
+		type: 'post',
+		data: {
+			recipe_id        : recipe_id,
+		},
+
+		success: function (data) {
+			var info = data.data;
+
+			if(data.status != 0)
+			{
+				alert('Application Error : ' + data.msg + ' Recipe ID : ' + info.recipe_id); 
+				gCurrRecipe = -1;
+			}
+			else
+			{
+				gCurrRecipe = info.id;		// update global
+				
+				// stuff fields reading for edit...
+				
+				$("#recipe_name").val(info.name);	
+				$("#recipe_author").val(info.author);
+				$("#recipe_description").val(info.description);
+			}
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			gCurrRecipe = -1;
+		},
+	});		
+}
 
 function addRecipe()
 {
+	// these must be set for all node types
 	
-	alert('Adding New Recipe');
+	var name = $("#recipe_name").val();	
+	var author = $("#recipe_author").val();
+	var description = $("#recipe_description").val();
+	
+	name = name.trim(); // if your browser doesn't have this get a new browswer
+	author = author.trim();
+	
+	if(name.length == 0)
+	{
+		alert('Error, Recipe Name Can\'t be empty');
+		return -1;
+	}
+
+	if(author.length == 0)
+	{
+		alert('Error, Author Can\'t be empty');
+		return -1;
+	}
+		
+	$.ajax({
+		url: '{$ajax_url['add-recipe']}',
+		type: 'post',
+		data: {
+			name        : name,
+			description : description,
+			author	    : author
+		},
+
+		success: function (data) {
+			var info = data.data;
+
+			if(data.status != 0)
+			{
+				alert('Application Error : ' + data.msg); 
+				gCurrRecipe = -1;
+			}
+			else
+			{
+				var id = info.recipe_id;
+
+				updateTreeURL(id);	// update the tree, refresh, reload etc
+				
+				// if success go back to tree work, otherwise says on recipe edit until cancel or successful save
+				showRecipeEdit(false);
+				refreshRecipeList(id);
+				showTreeEdit(true);
+				clearRecipeEdits();
+				gCurrRecipe = id;		// update global
+			}
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			gCurrRecipe = -1;
+		},
+	});		
+}
+
+function updateRecipe()
+{
+	if(gCurrRecipe == -1)
+	{
+		alert('No active Recipe Id, refresh page and select a recipe');
+		return;
+	}
 
 	// these must be set for all node types
 	
@@ -1039,44 +1199,82 @@ function addRecipe()
 	if(name.length == 0)
 	{
 		alert('Error, Recipe Name Can\'t be empty');
-		return;
+		return -1;
 	}
 
 	if(author.length == 0)
 	{
 		alert('Error, Author Can\'t be empty');
-		return;
+		return -1;
 	}
 		
 	$.ajax({
-		url: '{$ajax_url['add-recipe']}',
+		url: '{$ajax_url['update-recipe']}',
 		type: 'post',
 		data: {
+			recipe_id	: gCurrRecipe,
 			name        : name,
 			description : description,
 			author	    : author
 		},
 
 		success: function (data) {
-			info = data.data;
+			var info = data.data;
 
 			if(data.status != 0)
 			{
 				alert('Application Error : ' + data.msg); 
-				return;
-			}
 
-			var id = info.recipe_id;
-			updateTreeURL(id);	// update the tree, refresh, reload etc
-			
-			// $('#treeview').jstree('refresh');	// once added get the new data
-			// update the tree url to the new recipe which should just have the root node
+				// out of recipe edit mode
+				gCurrRecipe = -1;
+				showRecipeEdit(false);
+				showTreeEdit(true);
+				
+			}
+			else
+			{
+				// don't need to do much here
+				alert('Update of Recipe is OK');
+				// if success go back to tree work, otherwise says on recipe edit until cancel or successful save
+
+				updateTreeURL(id);	// update the tree, refresh, reload etc
+				showRecipeEdit(false);
+				refreshRecipeList(id);
+				showTreeEdit(true);
+				clearRecipeEdits();
+				gCurrRecipe = id;		// update global
+
+			}
 		},
 		
 		error:	function(data) {
 			alert('Http Response : ' + data.responseText + ' Operation Failed');
-			// turn tree red, this is where communication failed or invalid
-			// data to the ajax call was sent.
+
+			// out of recipe edit mode
+			gCurrRecipe = -1;
+			showRecipeEdit(false);
+			refreshRecipeList();
+			showTreeEdit(true);
+		},
+	});		
+}
+
+function refreshRecipeList(selected)
+{
+	$.ajax({
+		url: '{$ajax_url['get-recipes']}',
+		type: 'post',
+		data: {},
+
+		success: function (html) {
+			$("#recipe_list").html(html);
+			
+			if(selected !== false)
+				$("#recipe_list").val(selected);
+		},
+		
+		error:	function(data) {
+			alert('Can\'t acquire Recipes List, Communications error');
 		},
 	});		
 }
