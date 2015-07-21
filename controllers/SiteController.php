@@ -7,7 +7,9 @@ use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\db\Query;
-use yii\filters\Cors;
+//use yii\filters\Cors;
+use yii\helpers\ArrayHelper;
+use yii\helpers\Html;
 use app\models\LoginForm;
 use app\models\ContactForm;
 
@@ -31,8 +33,6 @@ const JSON_RESP_TARGET_NODE_INVALID = 11;
 const JSON_RESP_DUPE_SPEC_IN_LEVEL = 12;
 const JSON_RESP_DELETE_ROOT_NOT_ALLOWED = 13;
 const JSON_RESP_INVALID_ERROR = 99999;
-
-
 
 // get the error string for a particular JSON status response
 function getJSONStatus($status_id)
@@ -202,6 +202,19 @@ class SiteController extends Controller
 			];
 	}
 	
+
+	// return the list of recipies, must be active 
+	public function getRecipe($recipe_id)
+	{
+		$recipes = (new Query())->select('id, name, description, author')->
+									from('{{%recipes}}')->
+									orderBy('name')->
+									where(['id' => $recipe_id, 'active'=>'1'])->
+									limit(1)->
+									one();
+		return $recipes;
+	}
+
 	// return the list of recipies, must be active 
 	public function getRecipes()
 	{
@@ -210,7 +223,7 @@ class SiteController extends Controller
 									orderBy('name')->
 									where(['active'=>'1'])->
 									all();
-		return $recipes;
+		return ArrayHelper::map($recipes, 'id', 'name');
 	}
 
 	// given a parent node, return a list of all children. This 
@@ -406,8 +419,38 @@ class SiteController extends Controller
 		return $recipe_id;
 	}
 
+	public function updateRecipe($recipe_id, $name, $description, $author, &$status)
+	{
+		if(!is_numeric($recipe_id) || empty($name) || empty($description) || empty($author))
+		{
+			$status = JSON_RESP_INVALID_ADD_DATA;
+			return false;
+		}
+
+		try
+		{
+			$count = Yii::$app->db->createCommand()->update('{{%recipes}}', 
+						[	// upate fields
+							'name'=>$name, 
+							'description' => $description,
+							'author' => $author,
+						],
+						['id' => $recipe_id]	// where part
+			)->execute();
+		}
+		catch(Exception $e)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+	
+		$status = JSON_RESP_OK;
+		return ($count == 1)? true : false; // anything other then one is a problem
+	}
+	
+	
 	// remove a recipe and all it's children. Can cause a lot of damage
-	// if used improperly 
+	// if used improperly. Likely should not be allowed for most users 
 	// returns FALSE on fail, a count (may be 0) on success
 	public function removeRecipeAndNodes($recipe_id, &$status)
 	{
@@ -1169,6 +1212,51 @@ class SiteController extends Controller
 		]);
 	}
 
+	// returns a list of recipies (HTML list format not JSON)
+	public function actionGetRecipes()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+			
+		$recipes = $this->getRecipes();
+		
+		if(count($recipes) == 0)
+			return '<option value=0" selected>No Recipies Available</option>';
+
+		$list = '';
+		
+		// format the list as options for the drop down list box
+		foreach ($recipes as $key=>$value) 
+		{
+			$list .= Html::tag('option', Html::encode($value), ['value' => $key]);
+		}
+
+		return $list;
+	}
+
+	// returns a SINGLE recipe (JSON)
+	public function actionGetRecipe()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+			
+		if(!isset($_POST['recipe_id']) || !is_numeric($_POST['recipe_id']))
+			throw new \yii\web\BadRequestHttpException;
+
+		$recipe_id = $_POST['recipe_id'];
+	
+		if(($recipe_data = $this->getRecipe($recipe_id)) === false)
+			$json_response = formatJSONResponse(JSON_RESP_INVALID_RECIPE_ID, ['recipe_id' => $recipe_id]);
+		else
+			$json_response = formatJSONResponse(JSON_RESP_OK, $recipe_data);
+
+	    return \Yii::createObject([
+        'class' => 'yii\web\Response',
+        'format' => \yii\web\Response::FORMAT_JSON,
+        'data' =>  $json_response,
+		]);
+	}
+
 	// adds a new recipe and all that it entails
 	public function actionAddRecipe()
 	{
@@ -1197,4 +1285,38 @@ class SiteController extends Controller
         'data' => $json_response,
 		]); 
 	}
+	
+	// adds a new recipe and all that it entails
+	public function actionUpdateRecipe()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+		
+		// do some checking
+
+		if(!isset($_POST['recipe_id']) || !is_numeric($_POST['recipe_id']))
+			throw new \yii\web\BadRequestHttpException;
+			
+		if(!isset($_POST['name']))
+			throw new \yii\web\BadRequestHttpException;
+
+		if(!isset($_POST['description']))
+			throw new \yii\web\BadRequestHttpException;
+
+		if(!isset($_POST['author']))
+			throw new \yii\web\BadRequestHttpException;
+
+		$recipe_id = $_POST['recipe_id'];
+		
+		if($this->updateRecipe($recipe_id, trim($_POST['name']), trim($_POST['description']), trim($_POST['author']), $status) === false)
+			$json_response = formatJSONResponse($status, ['recipe_id' => $recipe_id]);
+		else
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $recipe_id]);
+
+	    return \Yii::createObject([
+        'class' => 'yii\web\Response',
+        'format' => \yii\web\Response::FORMAT_JSON,
+        'data' => $json_response,
+		]); 
+	}	
 }
