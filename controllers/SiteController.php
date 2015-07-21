@@ -27,9 +27,9 @@ const JSON_RESP_INVALID_ADD_DATA = 5;
 const JSON_RESP_INVALID_MOVE_DATA = 6;
 const JSON_RESP_SQL_ERROR = 7;
 const JSON_RESP_INVALID_RECIPE_ID = 8;
-const JSON_RESP_LEAF_TO_LEAF_INVALID = 9;
-const JSON_RESP_SOURCE_NODE_INVALID = 10;
-const JSON_RESP_TARGET_NODE_INVALID = 11;
+const JSON_RESP_INVALID_LEAF_TO_LEAF = 9;
+const JSON_RESP_INVALID_SOURCE_NODE = 10;
+const JSON_RESP_INVALID_TARGET_NODE = 11;
 const JSON_RESP_DUPE_SPEC_IN_LEVEL = 12;
 const JSON_RESP_DELETE_ROOT_NOT_ALLOWED = 13;
 const JSON_RESP_INVALID_ERROR = 99999;
@@ -47,9 +47,9 @@ function getJSONStatus($status_id)
 		JSON_RESP_INVALID_MOVE_DATA => 'Invalid Move Data',
 		JSON_RESP_SQL_ERROR => 'Internal Error, SQL Execution Failed',
 		JSON_RESP_INVALID_RECIPE_ID => 'Invalid Recipe Id',
-		JSON_RESP_LEAF_TO_LEAF_INVALID => 'Invalid Add, Can\'t Add Leaf to a Leaf',
-		JSON_RESP_SOURCE_NODE_INVALID => 'Source Node does not exist',
-		JSON_RESP_TARGET_NODE_INVALID => 'Target Node does not exist',
+		JSON_RESP_INVALID_LEAF_TO_LEAF => 'Invalid Add, Can\'t Add Leaf to a Leaf',
+		JSON_RESP_INVALID_SOURCE_NODE => 'Source Node does not exist',
+		JSON_RESP_INVALID_TARGET_NODE => 'Target Node does not exist',
 		JSON_RESP_DUPE_SPEC_IN_LEVEL => 'Spec Already Exists in Level',
 		JSON_RESP_DELETE_ROOT_NOT_ALLOWED => 'Delete Root Node of Recipe is Not Allowed',
 		
@@ -272,8 +272,7 @@ class SiteController extends Controller
 			$children_list[] = $row['id'];
 		
 		return $children_list; // list of children with same parent_id (immediate)
-	}
-	
+	}	
 
 	// given a parent node, return a list of all childrens spec_ids. This 
 	// has no assumed order of nodes in the list
@@ -419,6 +418,7 @@ class SiteController extends Controller
 		return $recipe_id;
 	}
 
+	// update data in the recipe
 	public function updateRecipe($recipe_id, $name, $description, $author, &$status)
 	{
 		if(!is_numeric($recipe_id) || empty($name) || empty($description) || empty($author))
@@ -580,7 +580,7 @@ class SiteController extends Controller
 		
 		if(($parent = $this->getRecipeNode($target_id, $status)) === false)
 		{
-			$status = JSON_RESP_TARGET_NODE_INVALID;
+			$status = JSON_RESP_INVALID_TARGET_NODE;
 			return false;
 		}	
 
@@ -591,7 +591,7 @@ class SiteController extends Controller
 		
 		if($parent['spec_id'] != 9999)		// MAGIC NUMBER MAKE CONSTANT!!! 
 		{
-			$status = JSON_RESP_LEAF_TO_LEAF_INVALID;
+			$status = JSON_RESP_INVALID_LEAF_TO_LEAF;
 			return false;					// this indicated you are trying to add a node to a leaf
 		}
 		
@@ -660,7 +660,7 @@ class SiteController extends Controller
 		
 		if(($node = $this->getRecipeNode($node_id, $status)) === false)
 		{
-			$status = JSON_RESP_TARGET_NODE_INVALID;
+			$status = JSON_RESP_INVALID_TARGET_NODE;
 			return false;
 		}	
 
@@ -745,6 +745,106 @@ class SiteController extends Controller
 			return false;
 		}
 
+		return true;
+	}
+
+	// move a node ($source_id) to another parent ($target_id)
+	// initially will only move a $souce node to a target
+	// that is a parent type of node. Source nodes that are leafs
+	// can't be moved to other leafs. This might change as it may
+	// be OK as it might infer a reorder operation. But for now, 
+	// lets keep it simple
+	public function moveRecipeNode($source_id, $target_id, &$status)
+	{
+		if(($source_node = $this->getRecipeNode($source_id, $status)) === false)
+		{			
+			$status = JSON_RESP_INVALID_SOURCE_NODE;
+			return false;
+		}
+					
+		if(($target_node = $this->getRecipeNode($target_id, $status)) === false)
+		{
+			$status = JSON_RESP_INVALID_TARGET_NODE;
+			return false;
+		}
+			
+		// OK both nodes exist now some validation
+		
+		// if node is not 9999 then it's not a potential candidate
+		if($target_node['spec_id'] != 9999) // MAGIC NUMBER FOR PARENT NODE TYPE
+		{
+			$status = JSON_RESP_INVALID_LEAF_TO_LEAF;
+			return false;
+		}
+			
+		// can't move the recipe root node 
+		if($source_node['parent_id'] == 0)
+		{
+			$status = JSON_RESP_INVALID_SOURCE_NODE;
+			return false;
+		}
+		
+		// can't move to the same parent that is already set 
+		if($source_node['parent_id'] == $target_id)
+		{
+			$status = JSON_RESP_INVALID_TARGET_NODE;
+			return false;
+		}
+
+		// better safe then sorry
+		if($source_id == $target_id)
+		{
+			$status = JSON_RESP_INVALID_TARGET_NODE;
+			return false;
+		}
+	
+		// make sure same recipe, can't move out of a recipe
+		if($source_node['recipe_id'] != $target_node['recipe_id'])
+		{
+			$status = JSON_RESP_INVALID_RECIPE_ID;
+			return false;
+		}
+			
+		// check to make sure we are not moving a node with the same
+		// spec ID to a branch with a pre existing spec that matches. 
+		// this is not checked for parent nodes which can nest anywhere
+		// except under a child.
+		
+		if($source_node['spec_id'] != 9999)
+			if($this->isExistingImmediateSpec($target_id, $source_node['spec_id']))
+			{
+				$status = JSON_RESP_DUPE_SPEC_IN_LEVEL;
+				return false;
+			}
+			
+		// you can never copy a source to a target
+		// where the target is a child of the source! This is a more costly
+		
+		$child_list = [];
+		if($this->getChildList($child_list, $source_id) === false)
+		{
+			$status = JSON_RESP_INVALID_SOURCE_NODE;
+			return false;
+		}
+			
+		// oops, target is an ancestor of the source, no go	
+		if(in_array($target_id, $child_list))
+		{
+			$status = JSON_RESP_INVALID_TARGET_NODE;
+			return false;
+		}
+			
+		// Ok, now just change the paret of the source to the target
+		
+		if($this->updateRecipeParent($source_id, $target_id) === false)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+			
+		// success!
+		
+		$status = JSON_RESP_OK;
 		return true;
 	}
 
