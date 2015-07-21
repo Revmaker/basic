@@ -92,26 +92,28 @@ $this->params['breadcrumbs'][] = $this->title;
 			<button id="edit-recipe" class="btn btn-primary">Edit</button>
 		</div>
 	</div>
+	
 	<div class="row">
-			<div id="recipe_add_panel" class="recipe_add_panel col-sm-12">
-				<div class="form-inline">
-				  <div class="form-group">
-					<label for="recipe_name">Recipe Name</label>
-					<input type="text" class="form-control" id="recipe_name" placeholder="Some Name Here">
-				  </div>
-				  <div class="form-group">
-					<label for="recipe_description">Description</label>
-					<input type="text" class="form-control" id="recipe_description" size="35" placeholder="Important recipe">
-				  </div>
-				  <div class="form-group">
-					<label for="recipe_author">Author</label>
-					<input type="text" class="form-control" id="recipe_author" placeholder="Haystack Calhoon">
-				  </div>
-				  <button id="save-recipe" class="btn btn-primary">Save</button>
-				  <button id="cancel-recipe" class="btn btn-warning">Cancel</button>
-				</div>				
-			</div>
+		<div id="recipe_add_panel" class="recipe_add_panel col-sm-12">
+			<div class="form-inline">
+			  <div class="form-group">
+				<label for="recipe_name">Name</label>
+				<input type="text" class="form-control" id="recipe_name" placeholder="Enter Name">
+			  </div>
+			  <div class="form-group">
+				<label for="recipe_description">Description</label>
+				<input type="text" class="form-control" id="recipe_description" placeholder="Enter Description">
+			  </div>
+			  <div class="form-group">
+				<label for="recipe_author">Author</label>
+				<input type="text" class="form-control" id="recipe_author" placeholder="Enter Author">
+			  </div>
+			  <button id="save-recipe" class="btn btn-primary">Save</button>
+			  <button id="cancel-recipe" class="btn btn-warning">Cancel</button>
+			</div>				
+		</div>
 	</div>	
+	
 	<div id="recipe-tree" class="row">
 	<div class="tree-panel col-sm-7">
 
@@ -169,75 +171,74 @@ $this->params['breadcrumbs'][] = $this->title;
 	</div> <!-- tree-panel-->
 	
 	<div class="edit-panel col-sm-5">
-	<form class="form-horizontal"> 
-	<fieldset>
-	<!-- Form Name -->
-	<legend id="edit-state">Edit Data Here</legend>
+		<form class="form-horizontal"> 
+		<fieldset>
+		<legend id="edit-state">Edit Data Here</legend>
 
-	<div class="control-group">
-	  <label class="control-label" for="textinput">Name</label>
-	  <div class="controls">
-		<input name="name" placeholder="" class="input-xlarge" type="text">
-	  </div>
-	</div>
+		<div class="control-group">
+		  <label class="control-label" for="textinput">Name</label>
+		  <div class="controls">
+			<input name="name" placeholder="" class="input-xlarge" type="text">
+		  </div>
+		</div>
 
-	<div class="control-group">
-	  <label class="control-label" for="textinput">Weight</label>
-	  <div class="controls">
-		  
-		<?php
-			$weights = $this->context->getWeights();
-					?>  
-		<?= Html::dropDownList('weight_list', '0', ArrayHelper::map($weights, 'id', 'weight'), 
-								['id'=>'weight_list', 
-								]); 
-		?>
-	  </div>
+		<div class="control-group">
+		  <label class="control-label" for="textinput">Weight</label>
+		  <div class="controls">
+			  
+			<?php
+				$weights = $this->context->getWeights();
+						?>  
+			<?= Html::dropDownList('weight_list', '0', ArrayHelper::map($weights, 'id', 'weight'), 
+									['id'=>'weight_list', 
+									]); 
+			?>
+		  </div>
+		</div>
+		<div class="control-group no_disp_parent">
+		  <label class="control-label" for="textinput">Specification</label>
+		  <div class="controls">
+			  
+			<?php
+				$specs = $this->context->getSpecs();
+						?>  
+			<?= Html::dropDownList('spec_list', '', ArrayHelper::map($specs, 'id', 'spec_name'), 
+									['id'=>'spec_list',
+									]); 
+			?>
+		  </div>
+		</div>
+		
+		<div class="control-group">
+		  <label class="control-label" for="textinput">Order</label>
+		  <div class="controls">
+			<input name="order" placeholder="" class="input-xlarge" type="text">
+		  </div>
+		</div>
 
-	<div class="control-group no_disp_parent">
-	  <label class="control-label" for="textinput">Specification</label>
-	  <div class="controls">
-		  
-		<?php
-			$specs = $this->context->getSpecs();
-					?>  
-		<?= Html::dropDownList('spec_list', '', ArrayHelper::map($specs, 'id', 'spec_name'), 
-								['id'=>'spec_list',
-								]); 
-		?>
-	  </div>
-	</div>
-	
-	<div class="control-group">
-	  <label class="control-label" for="textinput">Order</label>
-	  <div class="controls">
-		<input name="order" placeholder="" class="input-xlarge" type="text">
-	  </div>
-	</div>
+		<div class="control-group no_disp_parent">
+		  <label class="control-label" for="textinput">Min</label>
+		  <div class="controls">
+			<input name="min" placeholder="" class="input-xlarge" type="text">
+		  </div>
+		</div>
+		
+		<div class="control-group no_disp_parent">
+		  <label class="control-label" for="textinput">Max</label>
+		  <div class="controls">
+			<input name="max" placeholder="" class="input-xlarge" type="text">
+		  </div>
+		</div>
+		<br />
 
-	<div class="control-group no_disp_parent">
-	  <label class="control-label" for="textinput">Min</label>
-	  <div class="controls">
-		<input name="min" placeholder="" class="input-xlarge" type="text">
-	  </div>
-	</div>
-	
-	<div class="control-group no_disp_parent">
-	  <label class="control-label" for="textinput">Max</label>
-	  <div class="controls">
-		<input name="max" placeholder="" class="input-xlarge" type="text">
-	  </div>
-	</div>
-	<br />
-
-	<button id="new-leaf" class="btn btn-primary">New Leaf</button>
-	<button id="new-parent" class="btn btn-primary">New Parent</button>
-	<button id="edit" class="btn btn-primary">Edit</button>
-	<button id="save" class="btn btn-success">Save</button> 
-	<button id="remove" class="btn btn-danger">Remove</button> 
-	<button id="cancel" class="btn btn-warning">Cancel</button> 
-	
-	</fieldset>
+		<button id="new-leaf" class="btn btn-primary">New Leaf</button>
+		<button id="new-parent" class="btn btn-primary">New Parent</button>
+		<button id="edit" class="btn btn-primary">Edit</button>
+		<button id="save" class="btn btn-success">Save</button> 
+		<button id="remove" class="btn btn-danger">Remove</button> 
+		<button id="cancel" class="btn btn-warning">Cancel</button> 
+		
+		</fieldset>
 	</form>
 	</div> <!-- edit-panel-->
 </div> <!-- row-->
@@ -281,6 +282,9 @@ $(document).ready(function() {
 	clearEdits();
 	setEditState('inactive');
 	$("#recipe_add_panel").hide();	// hide the recipe panel
+	clearRecipeEdits();
+	setRecipeState('inactive');
+	
 });
 
 // expand the tree by default on inital page open
