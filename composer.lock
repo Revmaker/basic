@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "0abda9bc00ac54b70fc495a74428126d",
+    "hash": "b95d7224f27e2e824f939ab578ff2338",
     "packages": [
         {
             "name": "bower-asset/bootstrap",
@@ -53,6 +53,38 @@
                 "mobile-first",
                 "responsive",
                 "web"
+            ]
+        },
+        {
+            "name": "bower-asset/bootstrap-sweetalert",
+            "version": "0.4.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/lipis/bootstrap-sweetalert.git",
+                "reference": "853bd5c8d047c68346a8aaf03969fd7296092157"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/lipis/bootstrap-sweetalert/zipball/853bd5c8d047c68346a8aaf03969fd7296092157",
+                "reference": "853bd5c8d047c68346a8aaf03969fd7296092157",
+                "shasum": ""
+            },
+            "type": "bower-asset-library",
+            "extra": {
+                "bower-asset-main": [
+                    "lib/sweet-alert.js",
+                    "lib/sweet-alert.css",
+                    "lib/sweet-alert.less",
+                    "lib/sweet-alert-animations.less"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "A beautiful replacement for JavaScript's alert for Bootstrap.",
+            "keywords": [
+                "alert",
+                "modal"
             ]
         },
         {
@@ -393,6 +425,49 @@
             "time": "2013-11-30 08:25:19"
         },
         {
+            "name": "raoul2000/yii2-pnotify-widget",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/raoul2000/yii2-pnotify-widget.git",
+                "reference": "8bfd5138e922a0a5846b9c999cf0b590a5127bed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/raoul2000/yii2-pnotify-widget/zipball/8bfd5138e922a0a5846b9c999cf0b590a5127bed",
+                "reference": "8bfd5138e922a0a5846b9c999cf0b590a5127bed",
+                "shasum": ""
+            },
+            "require": {
+                "yiisoft/yii2": "*"
+            },
+            "type": "yii2-extension",
+            "autoload": {
+                "psr-4": {
+                    "raoul2000\\widget\\pnotify\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Raoul",
+                    "email": "raoul.boulard@gmail.com"
+                }
+            ],
+            "description": "Wrapper around the PNotify JQuery plugin",
+            "keywords": [
+                "extension",
+                "jquery",
+                "notification",
+                "plugin",
+                "yii2"
+            ],
+            "time": "2014-10-11 13:42:54"
+        },
+        {
             "name": "swiftmailer/swiftmailer",
             "version": "v5.4.1",
             "source": {
@@ -489,46 +564,6 @@
                 "yii2"
             ],
             "time": "2015-01-06 20:04:57"
-        },
-        {
-            "name": "yii2mod/yii2-sweet-alert",
-            "version": "dev-master",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/yii2mod/yii2-sweet-alert.git",
-                "reference": "51f09c6c0435fc04e900e807ff4b94249a7ad19c"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/yii2mod/yii2-sweet-alert/zipball/51f09c6c0435fc04e900e807ff4b94249a7ad19c",
-                "reference": "51f09c6c0435fc04e900e807ff4b94249a7ad19c",
-                "shasum": ""
-            },
-            "require": {
-                "bower-asset/sweetalert": "*"
-            },
-            "type": "yii2-extension",
-            "autoload": {
-                "psr-4": {
-                    "yii2mod\\alert\\": ""
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Igor Chepurnoy",
-                    "email": "igorzfort@gmail.com"
-                }
-            ],
-            "description": "Alert widget based on SweetAlert extension {@link http://tristanedwards.me/sweetalert)",
-            "keywords": [
-                "module",
-                "yii2"
-            ],
-            "time": "2015-06-17 09:41:08"
         },
         {
             "name": "yiisoft/yii2",
