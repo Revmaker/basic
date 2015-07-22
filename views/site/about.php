@@ -6,6 +6,8 @@ use yii\helpers\Url;
 use yii\web\view;
 use yii\web\JsExpression;
 
+use raoul2000\widget\pnotify\PNotifyAsset;
+
 /* @var $this yii\web\View */
 $this->title = 'Recipe Editor';
 $this->params['breadcrumbs'][] = $this->title;
@@ -62,6 +64,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
 </style>
    
+<?php PNotifyAsset::register($this); ?>	
 
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
@@ -259,6 +262,7 @@ var gCurrNode = -1; 			// invalid for start
 var gCurrType = '';				// invalid for start
 var gCurrRecipe = -1;			// invalid for start
 var gCurrRecipeState = 'inactive'; // current edit state inactive, new or update
+var gAlert = false; 
 
 $(document).ready(function() {
 	
@@ -271,9 +275,24 @@ $(document).ready(function() {
 	$("#recipe_add_panel").hide();	// hide the recipe panel
 	clearRecipeEdits();
 	setRecipeState('inactive');
-	
+	consume_alert();
 });
 
+function consume_alert() {
+	// set timer to 2.5 secons
+    PNotify.prototype.options.delay = 2500;
+
+	// capture window alert and use the pnotify defined below
+    if (gAlert) return;
+    gAlert = window.alert;	// save it incase we want to restore later
+    window.alert = function(message) {
+        new PNotify({
+            title: 'Alert',
+            text: message,
+        });
+    };
+}
+    
 // expand the tree by default on inital page open
 
 $('#treeview').on('loaded.jstree', function (event, data) {
@@ -548,7 +567,6 @@ $('#save-recipe').on('click',function(event)
 {
 	if(gCurrRecipeState == 'new')
 	{
-		alert('Saving Recipe and Creating Root Node');
 		addRecipe();
 	}
 	else
@@ -583,13 +601,13 @@ $('#new-leaf').on('click',function(event)
 
 	if(gCurrType == 'leaf')
 	{
-		alert('Please Select a Parent Node as a target');
+		alert('Please Select a Parent Node as a Target');
 		return;
 	}
 	
 	if(gCurrParent == -1)
 	{
-		alert('no parent selected selected, please select a node in the tree')
+		alert('Parent node has not been selected selected, please select a node in the tree')
 		return;
 	}
 
@@ -618,7 +636,7 @@ $('#new-parent').on('click',function(event)
 
 	if(gCurrParent == -1)
 	{
-		alert('no parent selected selected, please select a node in the tree')
+		alert('Parent node has not beed selected, please select a node in the tree')
 		return;
 	}
 
@@ -637,7 +655,7 @@ $('#edit').on('click',function(event)
 
 	if(gCurrParent == -1)
 	{
-		alert('no parent selected selected, please select a node in the tree to edit')
+		alert('Nothing Selecte, please select a node in the tree to edit')
 		return;
 	}
 
@@ -662,7 +680,7 @@ $('#save').on('click',function(event)
 		}
 		else
 		{
-			alert('Unknown state. Can\'t save or update');
+			alert('ZZZZ Package Memory Dump : Unknown state. Can\'t save or update');
 		}
 
 		setEditState('browse');
@@ -677,13 +695,11 @@ $('#cancel').on('click',function(event)
 	getNode(gCurrNode);
 });
 
-
 // capture things in the tree when a click happens
 // mainly the single selected (by config options) node
 
 function getNode(node_id)
 {
-
 	if(node_id == -1)
 	{
 		alert('getNode() : Invalid node Id');
