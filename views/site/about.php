@@ -65,7 +65,6 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
-
 	<div class="row">
 		<div class="recipe_select_panel col-sm-5">
 			<?php
@@ -1087,6 +1086,8 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 				alert('Application Error : ' + data.msg + ',  Source Id : ' + node.source_id + ' Target Id : ' + node.target_id);
 				return;
 			}
+			
+			$('#treeview').jstree('refresh');	// once moved refresh get the new data
 		},
 		
 		error:	function(data) {
