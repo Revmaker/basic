@@ -1,11 +1,10 @@
 <?php
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
+use yii\helpers\VarDumper;
+use yii\helpers\Url;
 use yii\web\view;
 use yii\web\JsExpression;
-use yii\helpers\VarDumper;
-
-use yii\helpers\Url;
 
 /* @var $this yii\web\View */
 $this->title = 'Recipe Editor';
@@ -67,17 +66,6 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
 
-<?php /* echo \yii2mod\yii2-sweet-alert\Alert::widget([
-          'useSessionFlash' => false,
-          'options' => [
-               'title' => 'Success message',
-               'type' => 'Success',
-               'text' => "You will not be able to recover this imaginary file!",
-               'confirmButtonText'  => "Yes, delete it!",   
-               'cancelButtonText' =>  "No, cancel plx!"
-          ]
-]);*/
-?>
 	<div class="row">
 		<div class="recipe_select_panel col-sm-5">
 			<?php
