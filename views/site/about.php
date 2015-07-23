@@ -117,7 +117,17 @@ $this->params['breadcrumbs'][] = $this->title;
 		],
 		'jsOptions' => [
 			'core' => [
-				'check_callback' => true,	// needs to be true for DND
+			'check_callback' => new JsExpression('function (op, node, parent, position, more)
+					{
+						if(more && more.dnd)
+						{
+							// only allow drops on leafs if NOT on the direct leaf ("i")
+							if(more.pos == "i" && more.ref.type == "leaf")	// i=in, a=above, b=below
+								return false;	// no drop on a node
+						}
+						return true; // all other cases not specific to dnd
+					}'),
+
 				'multiple' => false,	// allow multiple selections, set to false to allow only single select
 
 				'themes' => [
