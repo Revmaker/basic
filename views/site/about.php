@@ -68,6 +68,9 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
+
+<?php $this->context->renumberLeafs(1);?>	
+	
 	<div class="row">
 		<div class="recipe_select_panel col-sm-5">
 			<?php
@@ -1077,6 +1080,8 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	// this will change the drop target to the parent if dropping on
 	// a leaf. This will be a problem if ever doing drag/drop reordering
 	// but otherwise allows for better ui
+
+console.log(data);
 		
     if(target_node.type === 'leaf')
 		target_id = target_node.parent;

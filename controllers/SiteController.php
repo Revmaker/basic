@@ -17,6 +17,10 @@ const ROOT_NODE = 'root';
 const PARENT_NODE = 'parent';
 const LEAF_NODE = 'leaf';
 
+// renumbering 
+const NODE_RENUMBER_START = 10;
+const NODE_RENUMBER_BUMP = 10;
+
 // JSON Error codes and messages 
 const JSON_RESP_OK = 0;
 const JSON_RESP_INVALID_NODE = 1;
@@ -32,6 +36,9 @@ const JSON_RESP_INVALID_SOURCE_NODE = 10;
 const JSON_RESP_INVALID_TARGET_NODE = 11;
 const JSON_RESP_DUPE_SPEC_IN_LEVEL = 12;
 const JSON_RESP_DELETE_ROOT_NOT_ALLOWED = 13;
+const JSON_RESP_RENUMBER_ERROR = 14;
+const JSON_RESP_EMPTY_PARENT = 15;
+
 const JSON_RESP_INVALID_ERROR = 99999;
 
 // get the error string for a particular JSON status response
@@ -52,6 +59,8 @@ function getJSONStatus($status_id)
 		JSON_RESP_INVALID_TARGET_NODE => 'Target Node does not exist',
 		JSON_RESP_DUPE_SPEC_IN_LEVEL => 'Spec Already Exists in Level',
 		JSON_RESP_DELETE_ROOT_NOT_ALLOWED => 'Delete Root Node of Recipe is Not Allowed',
+		JSON_RESP_RENUMBER_ERROR => 'Node Renumber Failed',
+		JSON_RESP_EMPTY_PARENT => 'Node has no children',
 		
 		JSON_RESP_INVALID_ERROR => 'Error of unknown type',
 	];	
@@ -327,6 +336,68 @@ class SiteController extends Controller
 				$children_list[] = $row['spec_id'];
 		
 		return $children_list; // list of children with same parent_id (immediate)
+	}
+////////////////////
+////////////////////
+////////////////////
+////////////////////
+
+	// given a node (hopefully a parent) it will renumber the nodes acording to the
+	// current order. What? Well if nodes are ordered 1, 45, 55,999 the nodes would
+	// be cleanly reorderd 10, 20, 30, 40. This does NOT change the order value
+	// of the passed in parent. It does not matter if the node is a leaf or a
+	// child it will get renumbers. Again note the lexical position of the node
+	// will not change just the numeric value. Rememeber Basic's renumber, same thing.
+	public function renumberLeafs($parent_id)
+	{
+		// get a list of this parents children
+		
+		$children = (new Query())->select('id, spec_id, order')->
+									from('{{%attributes}}')->
+									where(['parent_id' => $parent_id])->
+									all();
+									
+		if(count($children) == 0)
+			return JSON_RESP_EMPTY_PARENT;
+
+		// sort in ascending order yes, closure used here - idea stolen from stack overflow
+		usort($children, function($a, $b) {
+				return $a['order'] > $b['order'];
+			});
+
+		// renumber starting with some value, bump by another
+		$bumper = NODE_RENUMBER_START;
+		foreach($children as &$br)
+		{
+			$br['order'] = $bumper;
+			$bumper += NODE_RENUMBER_BUMP;
+		}		
+
+		// OK, now update it! Count is tricky here since if the data is the exact same
+		// it will NOT return an count of 1, but rather a count of 0 since nothing was changed
+		// note this can only update the order. Again possible place for a transaction 
+
+		foreach($children as $rec)
+		{
+			// let the db pummel begin
+			
+			try
+			{
+				$count = Yii::$app->db->createCommand()->update('{{%attributes}}', 
+							[	// upate fields
+								'order' => $rec['order'],
+							],
+							['id' => $rec['id']]	// where part
+				)->execute();
+			}
+			catch(Exception $e)
+			{
+				return JSON_RESP_RENUMBER_ERROR;
+			}
+		}
+		
+		// return a nice list
+		return JSON_RESP_OK;
 	}
 
 	// this will check for a spec on an existing level or below of the tree.
@@ -754,6 +825,18 @@ class SiteController extends Controller
 	// can't be moved to other leafs. This might change as it may
 	// be OK as it might infer a reorder operation. But for now, 
 	// lets keep it simple
+	
+/// Need to supply a tree order. That is, the order the tree says it was
+/// dropped on. Ie, if Dropped on Parent, offset is O, Head of the list
+/// under the parent, and so on. The default will be 0 if not set.
+///
+/// This is used for the ORDER data in the node. So now pull a list 
+/// back of all the parents nodes (leafs and children) and then
+/// find the value of the record of the sorted list (at the offset). 
+/// get that number and subtract 1 from it, save it to the source_order
+/// save the record, THEN RENUMBER the parents nodes.  This implies that
+/// that tree is always ordered where gaps exists between the orders. 
+
 	public function moveRecipeNode($source_id, $target_id, &$status)
 	{
 		if(($source_node = $this->getRecipeNode($source_id, $status)) === false)
@@ -841,6 +924,11 @@ class SiteController extends Controller
 			$status = JSON_RESP_SQL_ERROR;
 			return false;
 		}
+			
+// get the list of the targets immediate children (need ID, order)
+// find order at that offeset
+// get order and decrement and update the source nodes order with it
+// finall RENUMBER the targets immediate children
 			
 		// success!
 		
