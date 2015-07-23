@@ -139,9 +139,9 @@ $this->params['breadcrumbs'][] = $this->title;
 			],
 			'types' =>[
 				'default' =>['icon' => 'glyphicon glyphicon-flash'],
-				'parent' => ['icon' => '/images/gear.png'], // ['icon' => 'glyphicon glyphicon-eye-open'],
-				'leaf' => ['icon' => '/images/tools.png'], // ['icon' => 'glyphicon glyphicon-leaf'],
-				'root' => ['icon' => '/images/recipe.png'] // ['icon' => 'glyphicon glyphicon-folder-open']
+				'parent' => ['icon' => '../images/gear.png'], // ['icon' => 'glyphicon glyphicon-eye-open'],
+				'leaf' => ['icon' => '../images/tools.png'], // ['icon' => 'glyphicon glyphicon-leaf'],
+				'root' => ['icon' => '../images/recipe.png'] // ['icon' => 'glyphicon glyphicon-folder-open']
 			],
 			'plugins' => ['dnd', 'types', 'contextmenu'],
 			'dnd' => ['check_while_dragging' => true],
@@ -179,9 +179,9 @@ $this->params['breadcrumbs'][] = $this->title;
 		<form class="form-horizontal"> 
 		<fieldset>
 		<legend id="edit-state">Edit Data Here</legend>
-		<img class = 'state_icons' id="image-state-recipe" src="/images/recipe.png" />		
-		<img class = 'state_icons' id="image-state-parent" src="/images/gear.png" />		
-		<img class = 'state_icons' id="image-state-leaf" src="/images/tools.png" />		
+		<img class = 'state_icons' id="image-state-recipe" src="../images/recipe.png" />		
+		<img class = 'state_icons' id="image-state-parent" src="../images/gear.png" />		
+		<img class = 'state_icons' id="image-state-leaf" src="../images/tools.png" />		
 
 		<div class="control-group">
 		  <label class="control-label" for="textinput">Name</label>
