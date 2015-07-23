@@ -1071,37 +1071,25 @@ $('#remove').on('click',function(event)
 
 $('#treeview').on("move_node.jstree", function (e, data) {
 
-	//console.log(data);
-    alert('Moving Node Id : ' + data.node.id + ' To Node Id : ' + data.parent);
+    //alert('Moving Node Id : ' + data.node.id + ' To Node Id : ' + data.parent);
 
 	// this gets the full json for the node
+	
 	target_node = getNodeById(data.parent);
-
-	// this will change the drop target to the parent if dropping on
-	// a leaf. This will be a problem if ever doing drag/drop reordering
-	// but otherwise allows for better ui
-
-//console.log(data);
-console.log(data.position + ' ' + data.old_position);
-
-
+	source_node = getNodeById(data.node.id);
+	
     if(target_node.type === 'leaf')
-    {
 		target_id = target_node.parent;	// get leafs parent for the drop target
-	}
 	else
-	{
 		target_id = data.parent;
-	}
 
 	source_id = data.node.id;
 	
-
 	// get position needed for order
 	
 	position = data.position;
 
-console.log(position);
+	// console.log('Source Id : ' + source_id + ' Target Id : ' + target_id + ' Sending Position : ' + position + ' Old Position :' + data.old_position);
 
 	
 	$.ajax({
@@ -1122,7 +1110,12 @@ console.log(position);
 				alert('Application Error : ' + data.msg + ',  Source Id : ' + node.source_id + ' Target Id : ' + node.target_id);
 				return;
 			}
-			
+
+			if(source_node.type == 'leaf')
+				alert('Leaf Moved');
+			else
+				alert('Parent Node Move');
+				
 			$('#treeview').jstree('refresh');	// once moved refresh get the new data
 		},
 		

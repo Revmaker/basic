@@ -399,7 +399,7 @@ class SiteController extends Controller
 			}
 			catch(Exception $e)
 			{
-				return false; JSON_RESP_RENUMBER_ERROR;
+				return false; 
 			}
 		}
 		return true;
@@ -933,18 +933,80 @@ class SiteController extends Controller
 			$status = JSON_RESP_INVALID_TARGET_NODE;
 			return false;
 		}
-		
-	/*	// get list of child nodes (may be a mix of leafs and parents)
-		if(($children = $this->getChildNodesOrder($target_id)) === false)
-			return JSON_RESP_EMPTY_PARENT;
 
+		
+/*
+ 	$parent		= $this->get_node($parent, array('with_children'=> true, 'with_path' => true));
+		$id			= $this->get_node($id, array('with_children'=> true, 'deep_children' => true, 'with_path' => true));
+
+		if(!$parent['children']) {
+			$position = 0;
+		}
+		if($id[$this->options['structure']['parent_id']] == $parent[$this->options['structure']['id']] && $position > $id[$this->options['structure']['position']]) {
+			$position ++;
+		}
+		if($parent['children'] && $position >= count($parent['children'])) {
+			$position = count($parent['children']);
+		}
+		
+		if no children in the parent node then set position to 0
+		if current node's parent == it's parent AND it's target position > current position then bump insert position++
+		if parent has children AND target position >= number of child nodes $position = number of children
+ * 
+ */
+ 		
+		
+		// get list of child nodes (may be a mix of leafs and parents)
+		if(($children = $this->getChildNodesOrder($target_id)) === false)
+		{
+			$status = JSON_RESP_EMPTY_PARENT;
+			return false;
+		}
+		
 		// renumber to ensure what ever order was their is set to something nice to work with, ie 10, 20, 30
 		$this->renumberNodeList($children);
-	
+
+		// if at the end of a list and node was dropped from other parent
+		// JSTree sends the position value as if the node was in the list.
+		// so a parent with 5 children when dragging a node from another
+		// parent will show a position of 6, however we only have 5 since
+		// we have not updated yet. So fix here by just making it the end
+		// of the list.
+
+
+		// Need to scan the list to find the OLD position
+		$last_pos = 0;
+		foreach($children as $rec)
+		{
+			if($rec['id'] == $source_id)
+				break;
+			$last_pos++;
+		}
+
+		// If the current position is > the old position JSTree has 
+		// already included the node to the count will be off by one
+		
+		if($position > $last_pos)
+			$position++;
+
+		
+		// now depending on where the node was dropped fix up the order value
+		// this will cause the renumber to correcly position the node
+		
 		if(!isset($children[$position]))
-			return JSON_RESP_INVALID_POSITION;
+		{
+			// this case is a node that is past the end of the list. 
+			// jstree when added an node from another parent will add to 
+			// the list and as such the count will be > then the number 
+			// of children we know about.
 			
-		$new_source_order = $children[$position]['order'] - 1;	// so if node is ordered is 10, will be now 9
+			$position = count($children) - 1;
+			$new_source_order = $children[$position]['order'] + 1;	// so if node is ordered is 10, will be now 9
+		}
+		else
+		{
+			$new_source_order = $children[$position]['order'] - 1;	// so if node is ordered is 10, will be now 9
+		}
 		
 		// now need to add to the list or update if already in the list in the case of
 		// a move inside the same parent
@@ -956,6 +1018,7 @@ class SiteController extends Controller
 			{
 				$rec['order'] = $new_source_order;
 				$found = true;
+				break;
 			}
 		}
 
@@ -970,9 +1033,12 @@ class SiteController extends Controller
 		
 		// write the set of nodes and new order back to the db
 		
-		if($this->updateNodeListOrder($children))
-			return JSON_RESP_RENUMBER_ERROR;
-*/
+		if(!$this->updateNodeListOrder($children))
+		{
+			$status = JSON_RESP_RENUMBER_ERROR;
+			return false;
+		}
+		
 		// Ok, after all that need to update the linkages
 		
 		if($this->updateRecipeParent($source_id, $target_id) === false)
