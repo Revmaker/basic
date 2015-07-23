@@ -282,8 +282,8 @@ $(document).ready(function() {
 });
 
 function consume_alert() {
-	// set timer to 2.5 secons
-    PNotify.prototype.options.delay = 2500;
+	// set timer to 4 sec
+    PNotify.prototype.options.delay = 4000;
 
 	// capture window alert and use the pnotify defined below
     if (gAlert) return;
@@ -1081,21 +1081,36 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	// a leaf. This will be a problem if ever doing drag/drop reordering
 	// but otherwise allows for better ui
 
-console.log(data);
-		
-    if(target_node.type === 'leaf')
-		target_id = target_node.parent;
-	else
-		target_id = data.parent;
-	
-	source_id = data.node.id;
+//console.log(data);
+console.log(data.position + ' ' + data.old_position);
 
+
+    if(target_node.type === 'leaf')
+    {
+		target_id = target_node.parent;	// get leafs parent for the drop target
+	}
+	else
+	{
+		target_id = data.parent;
+	}
+
+	source_id = data.node.id;
+	
+
+	// get position needed for order
+	
+	position = data.position;
+
+console.log(position);
+
+	
 	$.ajax({
 		url: '{$ajax_url['move']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
 		data: {
 			source_id : source_id,
-			target_id : target_id			
+			target_id : target_id,
+			position  : position,			
 		},
 		
 		success: function (data) {
