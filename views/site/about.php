@@ -55,6 +55,9 @@ $this->params['breadcrumbs'][] = $this->title;
 		display: flex; /* equal height of the children */
 	}
 
+	.state_icons {
+		display : none;	// hide all display icons in the edit box
+	}
 	
 	/* removes the top dots on the root node that look bad */
 	
@@ -69,7 +72,6 @@ $this->params['breadcrumbs'][] = $this->title;
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
 
-<?php $this->context->renumberLeafs(1);?>	
 	
 	<div class="row">
 		<div class="recipe_select_panel col-sm-5">
@@ -136,10 +138,10 @@ $this->params['breadcrumbs'][] = $this->title;
 				],
 			],
 			'types' =>[
-				'default' => ['icon' => 'glyphicon glyphicon-flash'],
-				'parent' => ['icon' => 'glyphicon glyphicon-eye-open'],
-				'leaf' => ['icon' => 'glyphicon glyphicon-leaf'],
-				'root' => ['icon' => 'glyphicon glyphicon-folder-open']
+				'default' =>['icon' => 'glyphicon glyphicon-flash'],
+				'parent' => ['icon' => '/images/gear.png'], // ['icon' => 'glyphicon glyphicon-eye-open'],
+				'leaf' => ['icon' => '/images/tools.png'], // ['icon' => 'glyphicon glyphicon-leaf'],
+				'root' => ['icon' => '/images/recipe.png'] // ['icon' => 'glyphicon glyphicon-folder-open']
 			],
 			'plugins' => ['dnd', 'types', 'contextmenu'],
 			'dnd' => ['check_while_dragging' => true],
@@ -177,6 +179,9 @@ $this->params['breadcrumbs'][] = $this->title;
 		<form class="form-horizontal"> 
 		<fieldset>
 		<legend id="edit-state">Edit Data Here</legend>
+		<img class = 'state_icons' id="image-state-recipe" src="/images/recipe.png" />		
+		<img class = 'state_icons' id="image-state-parent" src="/images/gear.png" />		
+		<img class = 'state_icons' id="image-state-leaf" src="/images/tools.png" />		
 
 		<div class="control-group">
 		  <label class="control-label" for="textinput">Name</label>
@@ -350,7 +355,6 @@ function clearRecipeEdits()
 	$("#recipe_description").val('');
 }
 
-
 // show either full edits for leaf or subset for parent/root
 function setEditFields(type)
 {
@@ -360,6 +364,7 @@ function setEditFields(type)
 		$(".no_disp_parent").hide();	// root or parent nodes here
 	
 	gEditType = type;
+	setEditIconState(type);
 }
 
 function setReadOnly(state)
@@ -373,6 +378,29 @@ function setReadOnly(state)
 	// drop down lists
 	$("#spec_list").attr("disabled", state); 
 	$("#weight_list").attr("disabled", state); 
+}
+
+function setEditIconState(node_type)
+{
+	if(node_type == 'leaf')
+	{
+		$('#image-state-leaf').show();
+		$('#image-state-recipe').hide();
+		$('#image-state-parent').hide();
+	}
+	else
+		if(node_type == 'parent')
+		{
+			$('#image-state-parent').show();
+			$('#image-state-recipe').hide();
+			$('#image-state-leaf').hide();
+		}
+		else
+		{
+			$('#image-state-recipe').show();
+			$('#image-state-parent').hide();
+			$('#image-state-leaf').hide();
+		}
 }
 
 function setRecipeState(new_state)
@@ -409,7 +437,7 @@ function setEditState(new_state)
 				gEditState = 'inactive';	// new load or unknown state
 			
 		
-		setButtonState(gEditState);	// update button to new state
+		setButtonState(gEditState);		// update button to new state
 }
 
 function setRecipeControlState(state)
@@ -760,6 +788,9 @@ function getNode(node_id)
 			if(node['max'] === null)
 				node.max = '0';
 
+			if(node['weight'] === null)
+				node.weight = '0';
+
 			// try stuffing some data to input fields
 
 			$("input[name=name]").val(node.name);			
@@ -777,7 +808,7 @@ function getNode(node_id)
 			// mess with some button states based on node type
 			// also if the node is 9999 might want to disable 
 			// some fields or other UI indicators
-				
+
 			setEditFields(node.node_type); // set field displable or not
 		}
 	});			
@@ -807,11 +838,13 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		node = getNodeById(data.selected[0])
 		gCurrParent = node.parent;
 	}
-	else // it parent or root
+	else // its parent or root
 	{
 		gCurrParent = data.selected[0]; // it a parent so can add to it if any child selected
 	}
 	
+console.log(data.node.type);
+
 	// call the ajax function that gets a node.
 	
 	getNode(data.selected[0]);

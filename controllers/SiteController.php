@@ -339,10 +339,6 @@ class SiteController extends Controller
 		
 		return $children_list; // list of children with same parent_id (immediate)
 	}
-////////////////////
-////////////////////
-////////////////////
-////////////////////
 
 	// helper to get immediate child nodes with specific fields for order sorting
 	// comes sorted by order
@@ -604,7 +600,10 @@ class SiteController extends Controller
 		}
 			
 		if($node_data['spec_id'] == 9999)	// 9999 is a magic number 
-			$node_data['node_type'] = PARENT_NODE;
+			if($node_data['parent_id'] == 0)
+				$node_data['node_type'] = ROOT_NODE;
+			else
+				$node_data['node_type'] = PARENT_NODE;
 		else 
 			$node_data['node_type'] = LEAF_NODE;
 			
