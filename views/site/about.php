@@ -498,7 +498,7 @@ function setButtonState(state)
 
 			// if node is a leaf, can't add anything to it
 
-			if(gCurrType == 'parent' || gCurrType == 'parent')
+			if(gCurrType == 'parent' || gCurrType == 'root')
 			{
 				$("#new-leaf").prop("disabled", false);
 				$("#new-parent").prop("disabled", false);
@@ -704,7 +704,6 @@ $('#new-parent').on('click',function(event)
 	$("#weight_list").val('0');
 	$("input[name=order]").val('10');
 });
-
 
 $('#edit').on('click',function(event)
 {
