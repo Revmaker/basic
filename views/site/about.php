@@ -7,8 +7,8 @@ use yii\web\view;
 use yii\web\JsExpression;
 
 use raoul2000\widget\pnotify\PNotifyAsset;
+use yii2mod\alert\AlertAsset;
 
-/* @var $this yii\web\View */
 $this->title = 'Recipe Editor';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
@@ -67,7 +67,10 @@ $this->params['breadcrumbs'][] = $this->title;
 
 </style>
    
-<?php PNotifyAsset::register($this); ?>	
+<?php 
+	PNotifyAsset::register($this);	// load js for PNotify
+	AlertAsset::register($this); 	// load for sweetalert
+?>	
 
 <div class="site-about">
 	<h1><?= Html::encode($this->title) ?></h1>
@@ -646,6 +649,7 @@ $('#cancel-recipe').on('click',function(event)
 	clearRecipeEdits();
 	showTreeEdit(true);
 	setRecipeState('inactive'); // if here reset
+
 });
 
 $('#new-leaf').on('click',function(event)
@@ -739,6 +743,41 @@ $('#save').on('click',function(event)
 		setEditState('browse');
 });
 
+$('#remove').on('click',function(event)
+{
+	event.preventDefault(); 
+	selected = $('#treeview').jstree('get_selected');	// implies single selection mode
+	
+	if(selected.length == 0)
+	{
+		alert('Nothing Selected');
+		return;
+	}
+
+	swal({
+	  title: "Are You Sure?", 
+	  text: "Warning - The delete is permanent!",
+	  type: "warning",
+	  showCancelButton: true,
+	  confirmButtonText: "OK",
+	  cancelButtonText: "Cancel",
+	  closeOnConfirm: false,
+	  closeOnCancel: false
+	},
+	function(isConfirm)
+	{
+		if(isConfirm) 
+		{
+			removeNode(selected[0]);		
+			swal("Deleted!", "Your Completed", "success");
+		} 
+		else 
+		{
+			swal("Cancelled", "Operation Cancelled", "warning");
+		}
+	});
+});
+
 $('#cancel').on('click',function(event)
 {
 	event.preventDefault(); 
@@ -747,9 +786,6 @@ $('#cancel').on('click',function(event)
 	
 	getNode(gCurrNode);
 });
-
-// capture things in the tree when a click happens
-// mainly the single selected (by config options) node
 
 function getNode(node_id)
 {
@@ -1080,50 +1116,6 @@ function updateNode()
 	});		
 }
 
-$('#remove').on('click',function(event)
-{
-	event.preventDefault(); 
-		
-	selected = $('#treeview').jstree('get_selected');	// implies single selection mode
-	
-	if(selected.length == 0)
-	{
-		alert('Nothing Selected');
-		return;
-	}
-	
-	// alert('Removing Node ID (and children) ' + selected[0]);
-	
-	$.ajax({
-		url: '{$ajax_url['remove']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
-		type: 'post',
-		data: {
-			node_id : selected[0]
-		},
-		
-		success: function (data) {
-						
-			var node = data.data;
-
-			if(data.status != 0)
-			{
-				alert('Application Error : ' + data.msg + ',  Node Id : ' + node.node_id); 
-				return;
-			}
-			
-			alert('Deleted ' + node.node_cnt + ' Nodes from the tree');
-			
-			$('#treeview').jstree('refresh');
-			clearEdits();
-		},
-		
-		error:	function(data) {
-			alert('Http Response : ' + data.responseText + ' Operation Failed');
-		},
-		
-	});		
-});
-
 $('#treeview').on("move_node.jstree", function (e, data) {
 
     //alert('Moving Node Id : ' + data.node.id + ' To Node Id : ' + data.parent);
@@ -1183,6 +1175,41 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 	$('#treeview').jstree('open_all');
 	clearEdits();
 });
+
+function removeNode(id)
+{
+	
+	// alert('Removing Node ID (and children) ' + id);
+	
+	$.ajax({
+		url: '{$ajax_url['remove']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
+		type: 'post',
+		data: {
+			node_id : id
+		},
+		
+		success: function (data) {
+						
+			var node = data.data;
+
+			if(data.status != 0)
+			{
+				alert('Application Error : ' + data.msg + ',  Node Id : ' + node.node_id); 
+				return;
+			}
+			
+			alert('Deleted ' + node.node_cnt + ' Nodes from the tree');
+			
+			$('#treeview').jstree('refresh');
+			clearEdits();
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+		},
+		
+	});
+}
 
 function getRecipe(recipe_id)
 {
