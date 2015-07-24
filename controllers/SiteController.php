@@ -600,10 +600,12 @@ class SiteController extends Controller
 		}
 			
 		if($node_data['spec_id'] == 9999)	// 9999 is a magic number 
+		{
 			if($node_data['parent_id'] == 0)
 				$node_data['node_type'] = ROOT_NODE;
 			else
 				$node_data['node_type'] = PARENT_NODE;
+		}
 		else 
 			$node_data['node_type'] = LEAF_NODE;
 			
