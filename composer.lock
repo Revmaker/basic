@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "b95d7224f27e2e824f939ab578ff2338",
+    "hash": "21d3e34e6b44087aa31a3a01a6630140",
     "packages": [
         {
             "name": "bower-asset/bootstrap",
@@ -564,6 +564,46 @@
                 "yii2"
             ],
             "time": "2015-01-06 20:04:57"
+        },
+        {
+            "name": "yii2mod/yii2-sweet-alert",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/yii2mod/yii2-sweet-alert.git",
+                "reference": "e45a1820e9f7a6bc4c92009d132ff71c1fd538c1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/yii2mod/yii2-sweet-alert/zipball/e45a1820e9f7a6bc4c92009d132ff71c1fd538c1",
+                "reference": "e45a1820e9f7a6bc4c92009d132ff71c1fd538c1",
+                "shasum": ""
+            },
+            "require": {
+                "bower-asset/sweetalert": "*"
+            },
+            "type": "yii2-extension",
+            "autoload": {
+                "psr-4": {
+                    "yii2mod\\alert\\": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Igor Chepurnoy",
+                    "email": "igorzfort@gmail.com"
+                }
+            ],
+            "description": "Alert widget based on SweetAlert extension {@link http://tristanedwards.me/sweetalert)",
+            "keywords": [
+                "module",
+                "yii2"
+            ],
+            "time": "2015-07-22 08:45:41"
         },
         {
             "name": "yiisoft/yii2",
