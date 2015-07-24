@@ -628,7 +628,7 @@ $('#save-recipe').on('click',function(event)
 	else
 		if(gCurrRecipeState == 'update')
 		{
-			alert('Updating Recipe ID : ' + gCurrRecipe);
+			// alert('Updating Recipe ID : ' + gCurrRecipe);
 			updateRecipe();	 // gCurrRecipe has the active ID
 		}
 		else
@@ -712,7 +712,7 @@ $('#edit').on('click',function(event)
 
 	if(gCurrParent == -1)
 	{
-		alert('Nothing Selecte, please select a node in the tree to edit')
+		alert('Nothing Selected, please select a node in the tree to edit')
 		return;
 	}
 
@@ -727,7 +727,7 @@ $('#save').on('click',function(event)
 	
 	if(gEditState == 'new')
 	{
-		alert('Save the Record');
+		//alert('Save the Record');
 		addNode();
 	}
 	else
@@ -750,7 +750,7 @@ $('#remove').on('click',function(event)
 	
 	if(selected.length == 0)
 	{
-		alert('Nothing Selected');
+		alert('Nothing Selected, Select something!');
 		return;
 	}
 
@@ -791,7 +791,7 @@ function getNode(node_id)
 {
 	if(node_id == -1)
 	{
-		alert('getNode() : Invalid node Id');
+		//alert('getNode() : Invalid node Id');
 		return;
 	}
 	
@@ -911,7 +911,7 @@ function addNode()
 		return;
 	}
 	
-	alert('Adding Node to Parent ' + selected[0]);
+	//alert('Adding Node to Parent ' + selected[0]);
 
 	// these must be set for all node types
 	
@@ -1016,11 +1016,11 @@ function updateNode()
 	
 	if(selected.length == 0)
 	{
-		alert('Nothing Selected, can not update!');
+		alert('Nothing Selected, can\'t update!');
 		return;
 	}
 	
-	alert('Update Node ' + selected[0]);
+	//alert('Update Node ' + selected[0]);
 	
 	// that parent id is enough to get the
 	// recipe id, all parms needed
@@ -1157,11 +1157,12 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 				return;
 			}
 
-			if(source_node.type == 'leaf')
-				alert('Leaf Moved');
-			else
-				alert('Parent Node Move');
-				
+			//if(source_node.type == 'leaf')
+			//	alert('Leaf Moved');
+			//else
+			//	alert('Parent Node Move');
+			alert('Move went OK!');
+			
 			$('#treeview').jstree('refresh');	// once moved refresh get the new data
 		},
 		
@@ -1198,7 +1199,7 @@ function removeNode(id)
 				return;
 			}
 			
-			alert('Deleted ' + node.node_cnt + ' Nodes from the tree');
+			//alert('Deleted ' + node.node_cnt + ' Nodes from the tree');
 			
 			$('#treeview').jstree('refresh');
 			clearEdits();
