@@ -277,7 +277,7 @@ var gEditState = 'inactive';	// edit state new, update, browse
 var gEditType = 'inactive';		// current edit type, leaf or other 
 var gCurrParent = -1; 			// invalid for start
 var gCurrNode = -1; 			// invalid for start
-var gCurrType = '';				// invalid for start
+var gCurrType = 'invalid';		// invalid for start
 var gCurrRecipe = -1;			// invalid for start
 var gCurrRecipeState = 'inactive'; // current edit state inactive, new or update
 var gAlert = false; 
@@ -460,6 +460,7 @@ function setRecipeControlState(state)
 
 function setButtonState(state)
 {
+
 	if(state == 'update' || state == 'new')
 	{
 		$("#edit-state").html((state == 'new')? "Add Mode" : "Edit Mode");
@@ -492,9 +493,20 @@ function setButtonState(state)
 			$("#remove").prop("disabled",false);
 			$("#remove").show();
 
-			$("#new-leaf").prop("disabled", false);
+			// if node is a leaf, can't add anything to it
+
+			if(gCurrType == 'parent' || gCurrType == 'parent')
+			{
+				$("#new-leaf").prop("disabled", false);
+				$("#new-parent").prop("disabled", false);
+			}
+			else
+			{
+				$("#new-leaf").prop("disabled", true);
+				$("#new-parent").prop("disabled", true);
+			}
+
 			$("#new-leaf").show();
-			$("#new-parent").prop("disabled", false);
 			$("#new-parent").show();
 
 			$("#edit").prop("disabled", false);
@@ -762,7 +774,7 @@ function getNode(node_id)
 			// turn tree red, this is where communication failed or invalid
 			// data to the ajax call was sent.
 			gCurrNode = -1;
-			gCurrType = '';
+			gCurrType = 'invalid';
 		},
 		   
 		success: function (data) {
@@ -817,14 +829,13 @@ function getNode(node_id)
 $('#treeview').on('changed.jstree', function (e, data) 	{
 
 	// if we have nothing selected we can't do much, maybe some house keeping
-	
-	setEditState('browse');
 
 	if(data.selected.length == 0)
 	{
 		gCurrParent = -1;
 		gCurrNode = -1;
-		gCurrType = '';
+		gCurrType = 'invalid';
+		setEditState('browse');
 		return;
 	}
 	
@@ -833,6 +844,9 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	var json_node_type = data.node.type; // the type coming in from inital load
 	
 	gCurrType = data.node.type;
+	
+	setEditState('browse');	// set after we get the current type
+	
 	if(data.node.type == 'leaf')
 	{
 		node = getNodeById(data.selected[0])
@@ -842,8 +856,6 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 	{
 		gCurrParent = data.selected[0]; // it a parent so can add to it if any child selected
 	}
-	
-console.log(data.node.type);
 
 	// call the ajax function that gets a node.
 	
@@ -1134,7 +1146,6 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 
 	// console.log('Source Id : ' + source_id + ' Target Id : ' + target_id + ' Sending Position : ' + position + ' Old Position :' + data.old_position);
 
-	
 	$.ajax({
 		url: '{$ajax_url['move']}',	// must match URL format for Yii, will be different if 'friendlyURL' is enabled
 		type: 'post',
