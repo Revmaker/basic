@@ -1595,7 +1595,7 @@ class SiteController extends Controller
 		]); 
 	}
 	
-	// adds a new recipe and all that it entails
+	// updates a recipe and all that it entails
 	public function actionUpdateRecipe()
 	{
 		if (!Yii::$app->request->isAjax)
