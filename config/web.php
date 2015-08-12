@@ -10,7 +10,7 @@ $config = [
 
 // added for simple pretty urls that will map r=site/about to /about    
 		'urlManager' => [
-           // 'enablePrettyUrl' => true,
+            'enablePrettyUrl' => true,
             'showScriptName' => false,
             'enableStrictParsing' => false,
         ],
