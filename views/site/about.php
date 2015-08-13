@@ -118,7 +118,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	<?= \yiidreamteam\jstree\JsTree::widget([
 		'containerOptions' => [
 			'class' => 'jstreeview',	// sets the the div's CLASS
-			'id' => 'treeview',		// sets the div's ID
+			'id' => 'treeview',			// sets the div's ID
 		],
 		'jsOptions' => [
 			'core' => [
@@ -133,7 +133,7 @@ $this->params['breadcrumbs'][] = $this->title;
 						return true; // all other cases not specific to dnd
 					}'),
 
-				'multiple' => false,	// allow multiple selections, set to false to allow only single select
+				'multiple' => false,		// allow multiple selections, set to false to allow only single select
 
 				'themes' => [
 					'variant' => 'large',	// makes tree bigger
@@ -141,10 +141,10 @@ $this->params['breadcrumbs'][] = $this->title;
 				],
 			],
 			'types' =>[
-				'default' =>['icon' => 'glyphicon glyphicon-flash'],
-				'parent' => ['icon' => '../images/gear.png'], // ['icon' => 'glyphicon glyphicon-eye-open'],
-				'leaf' => ['icon' => '../images/tools.png'], // ['icon' => 'glyphicon glyphicon-leaf'],
-				'root' => ['icon' => '../images/recipe.png'] // ['icon' => 'glyphicon glyphicon-folder-open']
+				'default' =>['icon' => 'glyphicon glyphicon-flash'],		// use yii URL::to() to make safe
+				'parent' => ['icon' => URL::to('@web/images/gear.png')], 	// ['icon' => 'glyphicon glyphicon-eye-open'],
+				'leaf' => ['icon' => URL::to('@web/images/tools.png')],		// ['icon' => 'glyphicon glyphicon-leaf'],
+				'root' => ['icon' => URL::to('@web/images/recipe.png')]		// ['icon' => 'glyphicon glyphicon-folder-open']
 			],
 			'plugins' => ['dnd', 'types', 'contextmenu'],
 			'dnd' => ['check_while_dragging' => true],
@@ -182,10 +182,11 @@ $this->params['breadcrumbs'][] = $this->title;
 		<form class="form-horizontal"> 
 		<fieldset>
 		<legend id="edit-state">Edit Data Here</legend>
-		<img class = 'state_icons' id="image-state-recipe" src="../images/recipe.png" />		
-		<img class = 'state_icons' id="image-state-parent" src="../images/gear.png" />		
-		<img class = 'state_icons' id="image-state-leaf" src="../images/tools.png" />		
 
+		<?= Html::img('@web/images/recipe.png', ['class' => 'state_icons', 'id' => 'image-state-recipe']) ?>
+		<?= Html::img('@web/images/gear.png', ['class' => 'state_icons', 'id' => 'image-state-parent']) ?>
+		<?= Html::img('@web/images/tools.png', ['class' => 'state_icons', 'id' => 'image-state-leaf']) ?>
+		
 		<div class="control-group">
 		  <label class="control-label" for="textinput">Name</label>
 		  <div class="controls">
@@ -537,7 +538,7 @@ function setButtonState(state)
 // set the tree to the new recipe id and refreshes (loads)
 function updateTreeURL(id)
 {
-	var url = '{$ajax_url['tree']}' + '&recipe_id=' + id;
+	var url = '{$ajax_url['tree']}' + '?recipe_id=' + id;
 	$('#treeview').jstree(true).settings.core.data = {'url' : url}; 	
 	$('#treeview').jstree(true).refresh();
 }
@@ -596,7 +597,6 @@ function showTreeEdit(show)
 
 $('#new-recipe').on('click',function(event)
 {
-
 	setRecipeState('new');
 	showRecipeEdit(true);
 	showTreeEdit(false);
