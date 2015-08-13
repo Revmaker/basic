@@ -180,6 +180,12 @@ class SiteController extends Controller
         return $this->render('about');
     }
     
+    public function actionTreeEdit()
+    {
+        return $this->render('tree-edit');
+    }
+
+
     // returns a list of the specs. Will return only active
     // format is as an array of records. don't bring back the 9999 spec id, it's not
     // selectable by the user
