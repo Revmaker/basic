@@ -470,88 +470,122 @@ function setRecipeControlState(state)
 	}
 }
 
+// rename to edit state or something...
 function setButtonState(state)
 {
-	if(state == 'update' || state == 'new')
+	if(state == 'new')
 	{
-		$("#edit-state").html((state == 'new')? "Add Mode" : "Edit Mode");
-		
-		setReadOnly(false);
+			$("#edit-state").html("Add Mode");
+			
+			setReadOnly(false);
+			
+			$("#new-leaf").prop("disabled", true);
+			$("#new-leaf").hide();
+			$("#new-parent").prop("disabled", true);
+			$("#new-parent").hide();
 
-		$("#remove").prop("disabled",true);
-		$("#remove").hide();
-		
-		$("#new-leaf").prop("disabled", true);
-		$("#new-leaf").hide();
-		$("#new-parent").prop("disabled", true);
-		$("#new-parent").hide();
+			$("#edit-recipe").prop("disabled", true);
+			$("#edit-recipe").hide();
+			$("#copy-recipe").prop("disabled", true);
+			$("#copy-recipe").hide();
+			$("#delete-recipe").prop("disabled", true);
+			$("#delete-recipe").hide();
 
-		$("#edit-recipe").prop("disabled", true);
-		$("#edit-recipe").hide();
-		$("#copy-recipe").prop("disabled", true);
-		$("#copy-recipe").hide();
-		$("#delete-recipe").prop("disabled", true);
-		$("#delete-recipe").hide();
-
-		$("#save").prop("disabled",false);
-		$("#save").show();
-		$("#cancel").prop("disabled",false);
-		$("#cancel").show();
-		
+			$("#edit").prop("disabled",true);
+			$("#edit").hide();
+			$("#remove").prop("disabled",true);
+			$("#remove").hide();
+			$("#save").prop("disabled",false);
+			$("#save").show();
+			$("#cancel").prop("disabled",false);
+			$("#cancel").show();
 	}
-	else 
-		if(state == 'browse') // browse mode
+	else
+		if(state == 'update')
 		{
-			setReadOnly(true);
-			$("#edit-state").html("Browse Mode");
+			$("#edit-state").html("Edit Mode");
+			
+			setReadOnly(false);
 
-			$("#remove").prop("disabled",false);
-			$("#remove").show();
+			$("#new-leaf").prop("disabled", true);
+			$("#new-leaf").hide();
+			$("#new-parent").prop("disabled", true);
+			$("#new-parent").hide();
 
-			// if node is a leaf, can't add anything to it
+			$("#edit-recipe").prop("disabled", true);
+			$("#edit-recipe").hide();
+			$("#copy-recipe").prop("disabled", true);
+			$("#copy-recipe").hide();
+			$("#delete-recipe").prop("disabled", true);
+			$("#delete-recipe").hide();
 
-			if(gCurrType == 'parent' || gCurrType == 'root')
+			$("#edit").prop("disabled",true);
+			$("#edit").hide();
+			$("#remove").prop("disabled",true);
+			$("#remove").hide();
+			$("#save").prop("disabled",false);
+			$("#save").show();
+			$("#cancel").prop("disabled",false);
+			$("#cancel").show();
+		}
+		else 
+			if(state == 'browse') // browse mode
 			{
-				$("#new-leaf").prop("disabled", false);
-				$("#new-parent").prop("disabled", false);
+				setReadOnly(true);
+				$("#edit-state").html("Browse Mode");
+
+				$("#remove").prop("disabled",false);
+				$("#remove").show();
+
+				// if node is a leaf, can't add anything to it
+
+				if(gCurrType == 'parent' || gCurrType == 'root')
+				{
+					$("#new-leaf").prop("disabled", false);
+					$("#new-parent").prop("disabled", false);
+				}
+				else
+				{
+					$("#new-leaf").prop("disabled", true);
+					$("#new-parent").prop("disabled", true);
+				}
+
+				$("#new-leaf").show();
+				$("#new-parent").show();
+
+				$("#edit-recipe").prop("disabled", false);
+				$("#edit-recipe").show();
+				$("#copy-recipe").prop("disabled", false);
+				$("#copy-recipe").show();
+				$("#delete-recipe").prop("disabled", false);
+				$("#delete-recipe").show();
+				
+				$("#edit").prop("disabled",false);
+				$("#edit").show();
+
+				$("#save").prop("disabled",true);
+				$("#save").hide();
+				$("#cancel").prop("disabled",true);
+				$("#cancel").hide();
 			}
 			else
 			{
-				$("#new-leaf").prop("disabled", true);
-				$("#new-parent").prop("disabled", true);
+				setReadOnly(true);
+				$("#edit-state").html("Please Load Recipe");
+
+				$("#remove").hide();
+				$("#new-leaf").hide();
+				$("#new-parent").hide();
+				$("#edit-recipe").hide();
+				$("#copy-recipe").hide();
+				
+				$("#delete-recipe").hide();
+				$("#remove").hide();
+				$("#save").hide();
+				$("#cancel").hide();
+				$("#edit").hide();
+
 			}
-
-			$("#new-leaf").show();
-			$("#new-parent").show();
-
-			$("#edit-recipe").prop("disabled", false);
-			$("#edit-recipe").show();
-			$("#copy-recipe").prop("disabled", false);
-			$("#copy-recipe").show();
-			$("#delete-recipe").prop("disabled", false);
-			$("#delete-recipe").show();
-			
-			$("#save").prop("disabled",true);
-			$("#save").hide();
-			$("#cancel").prop("disabled",true);
-			$("#cancel").hide();
-		}
-		else
-		{
-			setReadOnly(true);
-			$("#edit-state").html("Load Recipe");
-
-			$("#remove").hide();
-			$("#new-leaf").hide();
-			$("#new-parent").hide();
-			
-			$("#edit-recipe").hide();
-			$("#copy-recipe").hide();
-			$("#delete-recipe").hide();
-			
-			$("#save").hide();
-			$("#cancel").hide();
-		}
 }
 
 // set the tree to the new recipe id and refreshes (loads)
