@@ -513,12 +513,44 @@ class SiteController extends Controller
 		return ($count == 1)? true : false; // anything other then one is a problem
 	}
 
-
-
 //////////////////////////
 /// NOT WORKING CODE
 //////////////////////////
 
+	// inserts a full new row in to the attributes table
+	// this is a simple helper. 
+	// returns new record ID if insert OK, false if fail
+	
+	public function insertTreeRec($rec)
+	{
+		if(empty($rec) === false)
+			return false;
+		
+		try
+		{
+			$count = Yii::$app->db->createCommand()->insert('{{%attributes}}', 
+					[	// insert fields
+						'name'=> $rec['name'], 
+						'weight' => $rec['weight'],
+						'order' => $rec['order'],
+						'parent_id' => $rec['parent_id'], 
+						'spec_id' => $rec['spec_id'], 
+						'recipe_id' => $rec['recipe_id'],  
+						'min'=> $rec['min'], 
+						'max'=> $rec['max'], 
+					]
+			)->execute();
+		}
+		catch(Exception $e)
+		{
+			return false;
+		}
+	
+		$rec_id = Yii::$app->db->getSchema()->getLastInsertID();
+
+		return ($count == 1)? $rec_id : false;
+	}
+	
 	public function dupeTree($parent_id, $new_parent_id) 
 	{
 		// get the list of all nodes with this parent id
@@ -534,8 +566,11 @@ class SiteController extends Controller
 		{
 			$row['parent_id'] = $new_parent_id;
 			
-			$new_id = $this->insertTreeRec($row);
-						
+			if(($new_id = $this->insertTreeRec($row)) === false)
+			{
+				continue; // quiet error, will cause loss of nodes (and possible childred) for sure
+			}
+			
 			// make the call if the spec_id == 9999 as that is not a terminal node and need exploration
 			
 			if($row['spec_id'] == 9999)
