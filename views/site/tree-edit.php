@@ -30,6 +30,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	
 	#recipe_list {
 		width : 50%;	/* width of dropdown*/
+		margin-right : 20px;
 	}
 	
 	.tree-panel { 
@@ -69,9 +70,7 @@ $this->params['breadcrumbs'][] = $this->title;
 <?php 
 	PNotifyAsset::register($this);	// load js for PNotify
 	AlertAsset::register($this); 	// load for sweetalert
-	
-	//$this->context->copyRecipe(3, $status);	// REMOVE TEST ONLY
-	//echo 'Status = ' . $status;
+
 ?>	
 
 <div class="site-about">
@@ -87,7 +86,6 @@ $this->params['breadcrumbs'][] = $this->title;
 								'prompt' => '--Select Recipe--',
 								]); 
 			?>
-
 			<button id="new-recipe" class="btn btn-primary">New</button>
 			<button id="edit-recipe" class="btn btn-primary">Edit</button>
 			<button id="copy-recipe" class="btn btn-primary">Copy</button>
@@ -279,6 +277,7 @@ $ajax_url['get-recipe']= Url::to(['site/get-recipe']);
 $ajax_url['update-recipe']= Url::to(['site/update-recipe']);
 $ajax_url['get-recipes']= Url::to(['site/get-recipes']);
 $ajax_url['delete-recipe']= Url::to(['site/delete-recipe']);
+$ajax_url['copy-recipe']= Url::to(['site/copy-recipe']); 
 
 $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tree ID to the end of this URL '$recipe_id=1234'
 
@@ -678,9 +677,9 @@ $('#copy-recipe').on('click',function(event)
 			// Do all calls on confirm here, ie copyRecipe() refresh to new
 			// recipe, etc
 
-//	setRecipeState('update');
-	getRecipe(id);
-	showTreeEdit(true);
+			copyRecipe(id);
+			getRecipe(id);
+			showTreeEdit(true);
 			swal("Recipe Copied", "Completed", "success");
 		} 
 		else 
@@ -1442,6 +1441,39 @@ function deleteRecipe(recipe_id)
 	});		
 }
 
+function copyRecipe(recipe_id)
+{			
+	$.ajax({
+		url: '{$ajax_url['copy-recipe']}',
+		type: 'post',
+		data: {
+			recipe_id : recipe_id
+		},
+
+		success: function (data) {
+			var info = data.data;
+
+			if(data.status != 0)
+			{
+				alert('Application Error : ' + data.msg); 
+				gCurrRecipe = -1;
+			}
+			else
+			{
+				var id = info.recipe_id;
+				invalidateTree();
+				gCurrRecipe = -1;		// update global
+				setRecipeState('inactive'); // if here reset so buttons OK
+				refreshRecipeList(false);
+			}
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			gCurrRecipe = -1;
+		},
+	});
+}
 
 function updateRecipe()
 {

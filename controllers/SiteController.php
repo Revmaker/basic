@@ -1763,7 +1763,7 @@ class SiteController extends Controller
 
 		// shold pass back the NEW recipie if successful otherwise error so the front end doesn't do anything.
 		
-		if($this->copyRecipe($recipe_id, trim($_POST['name']), trim($_POST['description']), trim($_POST['author']), $status) === false)
+		if($this->copyRecipe($recipe_id, $status) === false)
 			$json_response = formatJSONResponse($status, ['recipe_id' => $recipe_id]);
 		else
 			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $recipe_id]);
