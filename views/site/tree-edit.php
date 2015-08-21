@@ -20,7 +20,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		border-radius : 10px;
 		padding :10px;
 		margin-bottom: 5px;
-		margin-right : 10px;
+		/*margin-right : 10px;*/
 	}
 
 	.recipe_add_panel {
@@ -29,7 +29,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	}
 	
 	#recipe_list {
-		width : 60%;	/* width of dropdown*/
+		width : 50%;	/* width of dropdown*/
 	}
 	
 	.tree-panel { 
@@ -48,7 +48,6 @@ $this->params['breadcrumbs'][] = $this->title;
 		border-radius : 0 10px 10px  0;
 		padding :10px;
 		height:600px;
-		/*margin-left : 10px;*/
 	}
 
 	.row {
@@ -71,8 +70,8 @@ $this->params['breadcrumbs'][] = $this->title;
 	PNotifyAsset::register($this);	// load js for PNotify
 	AlertAsset::register($this); 	// load for sweetalert
 	
-	$this->context->copyRecipe(3, $status);	// REMOVE TEST ONLY
-	echo 'Status = ' . $status;
+	//$this->context->copyRecipe(3, $status);	// REMOVE TEST ONLY
+	//echo 'Status = ' . $status;
 ?>	
 
 <div class="site-about">
@@ -80,7 +79,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
 	
 	<div class="row">
-		<div class="recipe_select_panel col-sm-5">
+		<div class="recipe_select_panel col-sm-12">
 			<?php
 				$recipes = $this->context->getRecipes();
 				echo Html::dropDownList('recipe_list', '', $recipes, 
@@ -92,6 +91,7 @@ $this->params['breadcrumbs'][] = $this->title;
 			<button id="new-recipe" class="btn btn-primary">New</button>
 			<button id="edit-recipe" class="btn btn-primary">Edit</button>
 			<button id="copy-recipe" class="btn btn-primary">Copy</button>
+			<button id="delete-recipe" class="btn btn-primary">Delete</button>
 			
 		</div>
 	</div>
@@ -278,6 +278,8 @@ $ajax_url['add-recipe'] = Url::to(['site/add-recipe']);
 $ajax_url['get-recipe']= Url::to(['site/get-recipe']);
 $ajax_url['update-recipe']= Url::to(['site/update-recipe']);
 $ajax_url['get-recipes']= Url::to(['site/get-recipes']);
+$ajax_url['delete-recipe']= Url::to(['site/delete-recipe']);
+
 $ajax_url['tree'] = Url::to(['site/tree']); // this is not a post, append the tree ID to the end of this URL '$recipe_id=1234'
 
 $script = <<< JS
@@ -457,6 +459,7 @@ function setRecipeControlState(state)
 		$("#new-recipe").prop("disabled",false);
 		$("#edit-recipe").prop("disabled",false);
 		$("#copy-recipe").prop("disabled",false);
+		$("#delete-recipe").prop("disabled",false);
 		$("#recipe_list").prop("disabled",false);
 	}
 	else
@@ -465,13 +468,13 @@ function setRecipeControlState(state)
 		$("#new-recipe").prop("disabled",true);
 		$("#edit-recipe").prop("disabled",true);
 		$("#copy-recipe").prop("disabled",true);
+		$("#delete-recipe").prop("disabled",true);
 		$("#recipe_list").prop("disabled",true);
 	}
 }
 
 function setButtonState(state)
 {
-
 	if(state == 'update' || state == 'new')
 	{
 		$("#edit-state").html((state == 'new')? "Add Mode" : "Edit Mode");
@@ -486,11 +489,12 @@ function setButtonState(state)
 		$("#new-parent").prop("disabled", true);
 		$("#new-parent").hide();
 
-		$("#edit").prop("disabled", true);
-		$("#edit").hide();
-
-		$("#copy").prop("disabled", true);
-		$("#copy").hide();
+		$("#edit-recipe").prop("disabled", true);
+		$("#edit-recipe").hide();
+		$("#copy-recipe").prop("disabled", true);
+		$("#copy-recipe").hide();
+		$("#delete-recipe").prop("disabled", true);
+		$("#delete-recipe").hide();
 
 		$("#save").prop("disabled",false);
 		$("#save").show();
@@ -523,11 +527,13 @@ function setButtonState(state)
 			$("#new-leaf").show();
 			$("#new-parent").show();
 
-			$("#edit").prop("disabled", false);
-			$("#edit").show();
-			$("#copy").prop("disabled", false);
-			$("#copy").show();
-
+			$("#edit-recipe").prop("disabled", false);
+			$("#edit-recipe").show();
+			$("#copy-recipe").prop("disabled", false);
+			$("#copy-recipe").show();
+			$("#delete-recipe").prop("disabled", false);
+			$("#delete-recipe").show();
+			
 			$("#save").prop("disabled",true);
 			$("#save").hide();
 			$("#cancel").prop("disabled",true);
@@ -541,7 +547,11 @@ function setButtonState(state)
 			$("#remove").hide();
 			$("#new-leaf").hide();
 			$("#new-parent").hide();
-			$("#edit").hide();
+			
+			$("#edit-recipe").hide();
+			$("#copy-recipe").hide();
+			$("#delete-recipe").hide();
+			
 			$("#save").hide();
 			$("#cancel").hide();
 		}
@@ -555,15 +565,22 @@ function updateTreeURL(id)
 	$('#treeview').jstree(true).refresh();
 }
 
+function invalidateTree()
+{
+	$('#treeview').jstree(true).settings.core.data = ''; 	
+	$('#treeview').jstree(true).refresh();
+	id = -1;
+	setRecipeState('inactive');
+	setEditState('inactive');
+}
+
 $('#recipe_list').on('change', function(event)
 {
 	var id = $("#recipe_list").val();
 	
 	if(id == "")
 	{
-		$('#treeview').jstree(true).settings.core.data = ''; 	
-		$('#treeview').jstree(true).refresh();
-		id = -1;
+		invalidateTree();
 		return;
 	}
 
@@ -671,6 +688,38 @@ $('#copy-recipe').on('click',function(event)
 	});
 });
 
+$('#delete-recipe').on('click',function(event)
+{
+	id = $("#recipe_list").val();
+	
+	if(id < 1 || id == "")
+	{
+		alert('Please Select a Recipe from the list to Delete');
+		setRecipeState('inactive');
+		return;
+	}
+
+	swal({
+	  title: "Are You Sure?", 
+	  text: "Are you sure you want to DELETE this Recipe?",
+	  type: "warning",
+	  showCancelButton: true,
+	  confirmButtonText: "OK",
+	  cancelButtonText: "Cancel",
+	  closeOnConfirm: false,
+	  closeOnCancel: false
+	},
+	function(isConfirm)
+	{
+		if(isConfirm) 
+		{
+			deleteRecipe(id);
+			swal("Recipe Deleted", "Completed", "success");
+		} 
+		else 
+			swal("Cancelled", "Operation Cancelled", "warning");
+	});
+});
 
 $('#save-recipe').on('click',function(event)
 {
@@ -1358,6 +1407,41 @@ function addRecipe()
 		},
 	});		
 }
+
+function deleteRecipe(recipe_id)
+{			
+	$.ajax({
+		url: '{$ajax_url['delete-recipe']}',
+		type: 'post',
+		data: {
+			recipe_id : recipe_id
+		},
+
+		success: function (data) {
+			var info = data.data;
+
+			if(data.status != 0)
+			{
+				alert('Application Error : ' + data.msg); 
+				gCurrRecipe = -1;
+			}
+			else
+			{
+				var id = info.recipe_id;
+				invalidateTree();
+				gCurrRecipe = -1;		// update global
+				setRecipeState('inactive'); // if here reset so buttons OK
+				refreshRecipeList(false);
+			}
+		},
+		
+		error:	function(data) {
+			alert('Http Response : ' + data.responseText + ' Operation Failed');
+			gCurrRecipe = -1;
+		},
+	});		
+}
+
 
 function updateRecipe()
 {
