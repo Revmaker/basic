@@ -44,6 +44,7 @@ const JSON_RESP_RENUMBER_ERROR = 14;
 const JSON_RESP_EMPTY_PARENT = 15;
 const JSON_RESP_INVALID_POSITION = 16;
 const JSON_RESP_INVALID_COPY_DATA = 17;
+const JSON_RESP_INVALID_DEACTIVATE_DATA = 18;
 
 const JSON_RESP_INVALID_ERROR = 99999;
 
@@ -69,6 +70,7 @@ function getJSONStatus($status_id)
 		JSON_RESP_EMPTY_PARENT => 'Node has no children',
 		JSON_RESP_INVALID_POSITION => 'Invalid Move Position',
 		JSON_RESP_INVALID_COPY_DATA => 'Invalid Copy Data',
+		JSON_RESP_INVALID_DEACTIVATE_DATA => 'Invalid Deactivate Data',
 		
 		JSON_RESP_INVALID_ERROR => 'Error of unknown type',
 	];	
@@ -574,13 +576,40 @@ class SiteController extends Controller
 // this will be used later for each levels parent
 // I think at this point it's a recurse and do much of the same...
 
-
-				
 		
 		$status = JSON_RESP_OK;
 		return $new_recipie_id;
 	}
 
+	// decativte a recipe and that's about all
+	// $state = true for active, false is DE-active
+	
+	public function activateRecipe($recipe_id, $state, &$status)
+	{
+		if(!is_numeric($recipe_id))
+		{
+			$status = JSON_RESP_INVALID_DEACTIVATE_DATA;
+			return false;
+		}
+		
+		try
+		{
+			$count = Yii::$app->db->createCommand()->update('{{%recipes}}', 
+						[	// upate fields
+							'active'=>($state)? 1 : 0, 
+						],
+						['id' => $recipe_id]	// where part
+			)->execute();
+		}
+		catch(Exception $e)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+	
+		$status = JSON_RESP_OK;
+		return ($count == 1)? true : false; // anything other then one is a problem
+	}
 	
 	// remove a recipe and all it's children. Can cause a lot of damage
 	// if used improperly. Likely should not be allowed for most users 
@@ -1092,11 +1121,12 @@ class SiteController extends Controller
 	// NOTE that the {{%TableName}} sets the table name prefix
 	// this setting is in the config/db.php file and just add a line -
 	//     'tablePrefix' => 'usen_', or what ever your prefix is ('brpt_')
+	// Also this only looks at ACTIVE recipes
 	public function getRecipeName($recipe_id)
 	{
         $recipe_rec = (new Query())->select('name')->
 									 from('{{%recipes}}')->
-									 where(['id' => $recipe_id])->
+									 where(['id' => $recipe_id, 'active' => '1'])->
 									 limit(1)->
 									 one();
 									 
@@ -1620,8 +1650,8 @@ class SiteController extends Controller
 		
 		if(count($recipes) == 0)
 			return '<option value=0" selected>No Recipies Available</option>';
-
-		$list = '';
+		else
+			$list = '<option value="">--Select Recipe--</option>';	// the prompt
 		
 		// format the list as options for the drop down list box
 		foreach ($recipes as $key=>$value) 
@@ -1718,7 +1748,7 @@ class SiteController extends Controller
 		]); 
 	}	
 	
-		// updates a recipe and all that it entails
+	// Copy a recipe and all that it entails
 	public function actionCopyRecipe()
 	{
 		if (!Yii::$app->request->isAjax)
@@ -1745,4 +1775,31 @@ class SiteController extends Controller
 		]); 
 	}	
 
+	// Deactivates a recipe, to the user it maps to the delete action since
+	// we don't want the user to actually delete it.
+	public function actionDeleteRecipe()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+		
+		// do some checking
+
+		if(!isset($_POST['recipe_id']) || !is_numeric($_POST['recipe_id'])) // recipe id to copy
+			throw new \yii\web\BadRequestHttpException;
+			
+		$recipe_id = $_POST['recipe_id'];
+
+		// Deactivate the recipe
+		
+		if($this->activateRecipe($recipe_id, false, $status) === false)
+			$json_response = formatJSONResponse($status, ['recipe_id' => $recipe_id]);
+		else
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $recipe_id]);
+		
+	    return \Yii::createObject([
+        'class' => 'yii\web\Response',
+        'format' => \yii\web\Response::FORMAT_JSON,
+        'data' => $json_response,
+		]); 
+	}	
 }
