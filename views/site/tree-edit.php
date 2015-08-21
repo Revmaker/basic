@@ -29,7 +29,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	}
 	
 	#recipe_list {
-		width : 70%;
+		width : 60%;	/* width of dropdown*/
 	}
 	
 	.tree-panel { 
@@ -70,6 +70,9 @@ $this->params['breadcrumbs'][] = $this->title;
 <?php 
 	PNotifyAsset::register($this);	// load js for PNotify
 	AlertAsset::register($this); 	// load for sweetalert
+	
+	$this->context->copyRecipe(3, $status);	// REMOVE TEST ONLY
+	echo 'Status = ' . $status;
 ?>	
 
 <div class="site-about">
@@ -88,6 +91,8 @@ $this->params['breadcrumbs'][] = $this->title;
 
 			<button id="new-recipe" class="btn btn-primary">New</button>
 			<button id="edit-recipe" class="btn btn-primary">Edit</button>
+			<button id="copy-recipe" class="btn btn-primary">Copy</button>
+			
 		</div>
 	</div>
 	
@@ -451,6 +456,7 @@ function setRecipeControlState(state)
 		// show list and buttons
 		$("#new-recipe").prop("disabled",false);
 		$("#edit-recipe").prop("disabled",false);
+		$("#copy-recipe").prop("disabled",false);
 		$("#recipe_list").prop("disabled",false);
 	}
 	else
@@ -458,6 +464,7 @@ function setRecipeControlState(state)
 		// no changes until cancel or save
 		$("#new-recipe").prop("disabled",true);
 		$("#edit-recipe").prop("disabled",true);
+		$("#copy-recipe").prop("disabled",true);
 		$("#recipe_list").prop("disabled",true);
 	}
 }
@@ -481,6 +488,9 @@ function setButtonState(state)
 
 		$("#edit").prop("disabled", true);
 		$("#edit").hide();
+
+		$("#copy").prop("disabled", true);
+		$("#copy").hide();
 
 		$("#save").prop("disabled",false);
 		$("#save").show();
@@ -515,6 +525,8 @@ function setButtonState(state)
 
 			$("#edit").prop("disabled", false);
 			$("#edit").show();
+			$("#copy").prop("disabled", false);
+			$("#copy").show();
 
 			$("#save").prop("disabled",true);
 			$("#save").hide();
@@ -604,7 +616,6 @@ $('#new-recipe').on('click',function(event)
 
 $('#edit-recipe').on('click',function(event)
 {
-
 	id = $("#recipe_list").val();
 	
 	if(id < 1 || id == "")
@@ -613,11 +624,53 @@ $('#edit-recipe').on('click',function(event)
 		setRecipeState('inactive');
 		return;
 	}
+
+	// refresh with the new tree if successful
+	
 	setRecipeState('update');
 	showRecipeEdit(true);
 	getRecipe(id);
 	showTreeEdit(false);
 });
+
+$('#copy-recipe').on('click',function(event)
+{
+	id = $("#recipe_list").val();
+	
+	if(id < 1 || id == "")
+	{
+		alert('Please Select a Recipe from the list');
+		setRecipeState('inactive');
+		return;
+	}
+
+	swal({
+	  title: "Are You Sure?", 
+	  text: "Are you sure you want to create a copying of this Recipe?",
+	  type: "warning",
+	  showCancelButton: true,
+	  confirmButtonText: "OK",
+	  cancelButtonText: "Cancel",
+	  closeOnConfirm: false,
+	  closeOnCancel: false
+	},
+	function(isConfirm)
+	{
+		if(isConfirm) 
+		{
+			// Do all calls on confirm here, ie copyRecipe() refresh to new
+			// recipe, etc
+
+//	setRecipeState('update');
+	getRecipe(id);
+	showTreeEdit(true);
+			swal("Recipe Copied", "Completed", "success");
+		} 
+		else 
+			swal("Cancelled", "Operation Cancelled", "warning");
+	});
+});
+
 
 $('#save-recipe').on('click',function(event)
 {
@@ -649,7 +702,6 @@ $('#cancel-recipe').on('click',function(event)
 	clearRecipeEdits();
 	showTreeEdit(true);
 	setRecipeState('inactive'); // if here reset
-
 });
 
 $('#new-leaf').on('click',function(event)
@@ -678,7 +730,6 @@ $('#new-leaf').on('click',function(event)
 	$("input[name=order]").val('10');
 	$("input[name=min]").val('0');
 	$("input[name=max]").val('0');
-
 });
 
 $('#new-parent').on('click',function(event)
