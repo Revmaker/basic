@@ -7,21 +7,25 @@ use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
 use yii\db\Query;
-//use yii\filters\Cors;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 use app\models\LoginForm;
 use app\models\ContactForm;
 
+// node types
 const ROOT_NODE = 'root';
 const PARENT_NODE = 'parent';
 const LEAF_NODE = 'leaf';
+
+// copy recipe prefix
+const COPY_PREFIX = '**COPY-';
+const MAX_LEN_COPY_NAME = 32;
 
 // renumbering 
 const NODE_RENUMBER_START = 10;
 const NODE_RENUMBER_BUMP = 10;
 
-// JSON Error codes and messages 
+// JSON Error codes and messages (DO NOT CHANGE NUMBERS!!)
 const JSON_RESP_OK = 0;
 const JSON_RESP_INVALID_NODE = 1;
 const JSON_RESP_NOTHING_TO_DELETE = 2;
@@ -39,6 +43,7 @@ const JSON_RESP_DELETE_ROOT_NOT_ALLOWED = 13;
 const JSON_RESP_RENUMBER_ERROR = 14;
 const JSON_RESP_EMPTY_PARENT = 15;
 const JSON_RESP_INVALID_POSITION = 16;
+const JSON_RESP_INVALID_COPY_DATA = 17;
 
 const JSON_RESP_INVALID_ERROR = 99999;
 
@@ -63,6 +68,7 @@ function getJSONStatus($status_id)
 		JSON_RESP_RENUMBER_ERROR => 'Node Renumber Failed',
 		JSON_RESP_EMPTY_PARENT => 'Node has no children',
 		JSON_RESP_INVALID_POSITION => 'Invalid Move Position',
+		JSON_RESP_INVALID_COPY_DATA => 'Invalid Copy Data',
 		
 		JSON_RESP_INVALID_ERROR => 'Error of unknown type',
 	];	
@@ -93,6 +99,11 @@ function formatJSONResponse($status, $data)
 	
 	return $resp;
 }
+
+/// sjg note -
+/// MOST OF THIS SHOULD BE OFFLOADED TO A TREEEDIT CONTROLLER KEEPING
+/// SITE RELATED CODE HERE AND SPECIFIC TREE (OR OTHER) CODE IN IT'S 
+/// OWN CONTROLLER
 
 class SiteController extends Controller
 {
@@ -133,59 +144,6 @@ class SiteController extends Controller
         ];
     }
 
-    public function actionIndex()
-    {
-        return $this->render('index');
-    }
-
-    public function actionLogin()
-    {
-        if (!\Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
-
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        } else {
-            return $this->render('login', [
-                'model' => $model,
-            ]);
-        }
-    }
-
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
-    }
-
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        } else {
-            return $this->render('contact', [
-                'model' => $model,
-            ]);
-        }
-    }
-
-    public function actionAbout()
-    {
-        return $this->render('about');
-    }
-    
-    public function actionTreeEdit()
-    {
-        return $this->render('tree-edit');
-    }
-
-
     // returns a list of the specs. Will return only active
     // format is as an array of records. don't bring back the 9999 spec id, it's not
     // selectable by the user
@@ -220,16 +178,16 @@ class SiteController extends Controller
 	}
 	
 
-	// return the list of recipies, must be active 
+	// return one recipie, must be active, returns false on miss
 	public function getRecipe($recipe_id)
 	{
-		$recipes = (new Query())->select('id, name, description, author')->
+		$recipe = (new Query())->select('id, name, description, author')->
 									from('{{%recipes}}')->
 									orderBy('name')->
 									where(['id' => $recipe_id, 'active'=>'1'])->
 									limit(1)->
 									one();
-		return $recipes;
+		return $recipe;
 	}
 
 	// return the list of recipies, must be active 
@@ -246,7 +204,7 @@ class SiteController extends Controller
 	// given a parent node, return a list of all children. This 
 	// has no assumed order of nodes in the list
 	//
-	// $child_list must be an initialized
+	// $child_list must be initialized empty array
 	// $parent_id is the parent node you are looking for it' children, and parent_id is not in the result set
 	
 	public function getChildList(&$child_list, $parent_id) 
@@ -553,6 +511,76 @@ class SiteController extends Controller
 		return ($count == 1)? true : false; // anything other then one is a problem
 	}
 	
+	// copy an existing recipe and all data
+	public function copyRecipe($recipe_id, &$status)
+	{
+		if(!is_numeric($recipe_id))
+		{
+			$status = JSON_RESP_INVALID_COPY_DATA;
+			return false;
+		}
+
+		if(($recipe = $this->getRecipe($recipe_id)) === false)
+		{
+			$status = JSON_RESP_INVALID_COPY_DATA;
+			return false;
+		}
+
+		// now we have the id of the original recipe we want to copy.
+		// first create the recipe record in the recipies table, this is
+		// a flat one line with name, description and author. All the same
+		// except for the name which will be prefixed with 'COPY' or some
+		// such thing to differentiate it. Note names don't have to be unique
+		// and are currently 32 chars in the db so chop if needed
+
+		$name = $recipe['name'];
+		$description = $recipe['description'];
+		$author = $recipe['author'];
+
+		// create new name so it's recognizable by the user, make sure it doesnt
+		// overflow the field size. May be fine with PDO but better off being nice
+		
+		if((strlen($name) + strlen(COPY_PREFIX)) > MAX_LEN_COPY_NAME)
+			$name = COPY_PREFIX . substr($name, 0, MAX_LEN_COPY_NAME - strlen(COPY_PREFIX)); 
+		else
+			$name = COPY_PREFIX . $name;
+		
+		try
+		{
+			$count = Yii::$app->db->createCommand()->insert('{{%recipes}}', 
+						[	// fields
+							'name'=>$name, 
+							'description' => $description,
+							'author' => $author,
+						]
+			)->execute();
+		}
+		catch(Exception $e)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+
+		// this magic gets the last inserted record's id (autoinc field)
+		$new_recipie_id = Yii::$app->db->getSchema()->getLastInsertID();
+		
+// ok, now is the mess.
+// First find the root of the recipe, node where parent is 0 and spec is 9999
+// This indicates the top node of the recipe. 
+// copy this node (insert a copy) into the table and get it's ID
+// save its new inserted record as $new_parent_id
+// now scan for all nodes at this level and insert with parent_id as new_parent_id
+// for each parent save old id and new id
+// this will be used later for each levels parent
+// I think at this point it's a recurse and do much of the same...
+
+
+				
+		
+		$status = JSON_RESP_OK;
+		return $new_recipie_id;
+	}
+
 	
 	// remove a recipe and all it's children. Can cause a lot of damage
 	// if used improperly. Likely should not be allowed for most users 
@@ -1260,6 +1288,62 @@ class SiteController extends Controller
         return $msg;
     }
 	
+	////////////////////////////////////////////////////////////////////
+	// ACTIONS BELOW
+	////////////////////////////////////////////////////////////////////
+	
+    public function actionIndex()
+    {
+        return $this->render('index');
+    }
+
+    public function actionLogin()
+    {
+        if (!\Yii::$app->user->isGuest) {
+            return $this->goHome();
+        }
+
+        $model = new LoginForm();
+        if ($model->load(Yii::$app->request->post()) && $model->login()) {
+            return $this->goBack();
+        } else {
+            return $this->render('login', [
+                'model' => $model,
+            ]);
+        }
+    }
+
+    public function actionLogout()
+    {
+        Yii::$app->user->logout();
+
+        return $this->goHome();
+    }
+
+    public function actionContact()
+    {
+        $model = new ContactForm();
+        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
+            Yii::$app->session->setFlash('contactFormSubmitted');
+
+            return $this->refresh();
+        } else {
+            return $this->render('contact', [
+                'model' => $model,
+            ]);
+        }
+    }
+
+    public function actionAbout()
+    {
+        return $this->render('about');
+    }
+    
+    public function actionTreeEdit()
+    {
+        return $this->render('tree-edit');
+    }
+
     public function actionTree()
     {
 		// gets the parameter recipe_id to load that particular recipe
@@ -1309,8 +1393,7 @@ class SiteController extends Controller
 							$jstreejson[$a_index]['type'] = 'leaf';
 						}
 						else
-						{
-							
+						{		
 							$jstreejson[$a_index]['type'] = 'parent';
 							//$jstreejson[$a_index]['icon'] = 'glyphicon glyphicon-eye-open';
 						}
@@ -1634,4 +1717,32 @@ class SiteController extends Controller
         'data' => $json_response,
 		]); 
 	}	
+	
+		// updates a recipe and all that it entails
+	public function actionCopyRecipe()
+	{
+		if (!Yii::$app->request->isAjax)
+			throw new \yii\web\MethodNotAllowedHttpException;
+		
+		// do some checking
+
+		if(!isset($_POST['recipe_id']) || !is_numeric($_POST['recipe_id'])) // recipe id to copy
+			throw new \yii\web\BadRequestHttpException;
+			
+		$recipe_id = $_POST['recipe_id'];
+
+		// shold pass back the NEW recipie if successful otherwise error so the front end doesn't do anything.
+		
+		if($this->copyRecipe($recipe_id, trim($_POST['name']), trim($_POST['description']), trim($_POST['author']), $status) === false)
+			$json_response = formatJSONResponse($status, ['recipe_id' => $recipe_id]);
+		else
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $recipe_id]);
+		
+	    return \Yii::createObject([
+        'class' => 'yii\web\Response',
+        'format' => \yii\web\Response::FORMAT_JSON,
+        'data' => $json_response,
+		]); 
+	}	
+
 }
