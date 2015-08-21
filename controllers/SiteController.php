@@ -512,6 +512,43 @@ class SiteController extends Controller
 		$status = JSON_RESP_OK;
 		return ($count == 1)? true : false; // anything other then one is a problem
 	}
+
+
+
+//////////////////////////
+/// NOT WORKING CODE
+//////////////////////////
+
+	public function dupeTree($parent_id, $new_parent_id) 
+	{
+		// get the list of all nodes with this parent id
+		$treedata = (new Query())->select('id, spec_id, parent_id')->
+									from('{{%attributes}}')->
+									where(['parent_id' => $parent_id, 'active' => '1'])->
+									all();
+	
+		// add to the list, and call again with any potentials (recursive)
+		// if no data recursion stops
+		
+		foreach($treedata as $row) 
+		{
+			$row['parent_id'] = $new_parent_id;
+			
+			$new_id = $this->insertTreeRec($row);
+						
+			// make the call if the spec_id == 9999 as that is not a terminal node and need exploration
+			
+			if($row['spec_id'] == 9999)
+			{
+				$this->getChildList($row['id'], $new_parent_id);
+			}
+		}
+		
+		return;
+	}
+
+//////////////////////////
+
 	
 	// copy an existing recipe and all data
 	public function copyRecipe($recipe_id, &$status)
