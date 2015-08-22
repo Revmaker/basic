@@ -584,7 +584,6 @@ function setButtonState(state)
 				$("#save").hide();
 				$("#cancel").hide();
 				$("#edit").hide();
-
 			}
 }
 
@@ -1493,10 +1492,14 @@ function copyRecipe(recipe_id)
 			else
 			{
 				var id = info.recipe_id;
-				invalidateTree();
-				gCurrRecipe = -1;		// update global
+
+				updateTreeURL(id);	// update the tree, refresh, reload etc
+				showRecipeEdit(false);
+				refreshRecipeList(id);
+				showTreeEdit(true);
+				clearRecipeEdits();
+				gCurrRecipe = id;		// update global
 				setRecipeState('inactive'); // if here reset so buttons OK
-				refreshRecipeList(false);
 			}
 		},
 		
