@@ -202,7 +202,7 @@ class SiteController extends Controller
 									all();
 		return ArrayHelper::map($recipes, 'id', 'name');
 	}
-
+	
 	// given a parent node, return a list of all children. This 
 	// has no assumed order of nodes in the list
 	//
@@ -214,7 +214,7 @@ class SiteController extends Controller
 		// get the list of all nodes with this parent id
 		$treedata = (new Query())->select('id, spec_id, parent_id')->
 									from('{{%attributes}}')->
-									where(['parent_id' => $parent_id, 'active' => '1'])->
+									where(['parent_id' => $parent_id])-> // was , 'active' => '1'
 									all();
 	
 		// add to the list, and call again with any potentials (recursive)
@@ -513,21 +513,17 @@ class SiteController extends Controller
 		return ($count == 1)? true : false; // anything other then one is a problem
 	}
 
-//////////////////////////
-/// NOT WORKING CODE
-//////////////////////////
-
 	// inserts a full new row in to the attributes table
 	// this is a simple helper. 
 	// returns new record ID if insert OK, false if fail
 	
 	public function insertTreeRec($rec)
 	{
-		if(empty($rec) === false)
+		if(empty($rec))
 			return false;
 		
-		try
-		{
+		try {
+
 			$count = Yii::$app->db->createCommand()->insert('{{%attributes}}', 
 					[	// insert fields
 						'name'=> $rec['name'], 
@@ -538,6 +534,7 @@ class SiteController extends Controller
 						'recipe_id' => $rec['recipe_id'],  
 						'min'=> $rec['min'], 
 						'max'=> $rec['max'], 
+						'active' => $rec['active'],
 					]
 			)->execute();
 		}
@@ -551,12 +548,12 @@ class SiteController extends Controller
 		return ($count == 1)? $rec_id : false;
 	}
 	
-	public function dupeTree($parent_id, $new_parent_id) 
+	public function dupeTree($parent_id, $new_parent_id, $new_recipe_id) 
 	{
-		// get the list of all nodes with this parent id
-		$treedata = (new Query())->select('id, spec_id, parent_id')->
+		// get the list of all nodes with this parent id 
+		$treedata = (new Query())->select('id, parent_id, name, order, weight, spec_id, min, max, recipe_id, active')->
 									from('{{%attributes}}')->
-									where(['parent_id' => $parent_id, 'active' => '1'])->
+									where(['parent_id' => $parent_id])->	// was, 'active' => '1'
 									all();
 	
 		// add to the list, and call again with any potentials (recursive)
@@ -565,6 +562,7 @@ class SiteController extends Controller
 		foreach($treedata as $row) 
 		{
 			$row['parent_id'] = $new_parent_id;
+			$row['recipe_id'] = $new_recipe_id;
 			
 			if(($new_id = $this->insertTreeRec($row)) === false)
 			{
@@ -575,16 +573,13 @@ class SiteController extends Controller
 			
 			if($row['spec_id'] == 9999)
 			{
-				$this->getChildList($row['id'], $new_parent_id);
+				$this->dupeTree($row['id'], $new_id, $new_recipe_id);
 			}
 		}
 		
 		return;
 	}
 
-//////////////////////////
-
-	
 	// copy an existing recipe and all data
 	public function copyRecipe($recipe_id, &$status)
 	{
@@ -636,21 +631,31 @@ class SiteController extends Controller
 		}
 
 		// this magic gets the last inserted record's id (autoinc field)
-		$new_recipie_id = Yii::$app->db->getSchema()->getLastInsertID();
-		
-// ok, now is the mess.
-// First find the root of the recipe, node where parent is 0 and spec is 9999
-// This indicates the top node of the recipe. 
-// copy this node (insert a copy) into the table and get it's ID
-// save its new inserted record as $new_parent_id
-// now scan for all nodes at this level and insert with parent_id as new_parent_id
-// for each parent save old id and new id
-// this will be used later for each levels parent
-// I think at this point it's a recurse and do much of the same...
+		$new_recipe_id = Yii::$app->db->getSchema()->getLastInsertID();
 
+		// get the root node of the recipe to be copied
+		
+		$root_node = $this->getRecipeRootNode($recipe_id, $status);
+		if($status != JSON_RESP_OK)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+
+		// save new node with updated recipe id and get it's new record ID 
+		$root_node['recipe_id'] = $new_recipe_id; 
+		if(($new_parent_id = $this->insertTreeRec($root_node)) === false)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+		
+		// dupe the tree AFTER the root node
+		// TODO: Better error check
+		$this->dupeTree($root_node['id'], $new_parent_id, $new_recipe_id);
 		
 		$status = JSON_RESP_OK;
-		return $new_recipie_id;
+		return $new_recipe_id;
 	}
 
 	// decativte a recipe and that's about all
@@ -707,9 +712,33 @@ class SiteController extends Controller
 		return $total_count;
 	}
 
-
+    // helper function give recipe_id it returns the root record for the tree
+    // Returns a row or false if no match.
+    // currently returns databank fields (id, parent_id, name, weight, spec_id, min, max, recipe_id)
+    public function getRecipeRootNode($recipe_id, &$status)
+    {
+		// this query is tricky for one reason in that while the one() option 
+		// specifies one record (row) it still will query and pull back internally
+		// all matching rows. The limit(1) ensures efficiency. 
+		
+		$node_data = (new Query())->select('id, parent_id, name, order, weight, spec_id, min, max, recipe_id, active')->
+							from('{{%attributes}}')->
+							where(['recipe_id' => $recipe_id, 'parent_id' => '0'])->
+							limit(1)->
+							one();
+									
+		if($node_data === false)
+		{
+			$status = JSON_RESP_SQL_ERROR;
+			return false;
+		}
+			
+		$status = JSON_RESP_OK;
+		return $node_data;
+	}
+	
     // helper function give unique node_id it returns the record. Not sure
-    // if any reason to also  require the recipe_id since node_id's are 
+    // if any reason to also require the recipe_id since node_id's are 
     // unique.
     // Returns a row or false if no match.
     // currently returns databank fields (id, parent_id, name, weight, spec_id, min, max, recipe_id)
@@ -1208,13 +1237,16 @@ class SiteController extends Controller
 		return $recipe_rec['name'];
 	}
 
-	// need spec_id as it hints at node type (leaf/parent)
+	
+	// pulls all nodes for a given recipe. This only pulls
+	// nodes with the active flag set to 1. The active flag
+	// should NOT be used in this type of data typically 
 	
     public function getRecipeTree($recipe_id)
     {
 		$jstreedata = (new Query())->select('id, parent_id, name, spec_id')->
 									from('{{%attributes}}')->
-									where(['recipe_id' => $recipe_id])->
+									where(['recipe_id' => $recipe_id])-> // was 'active' => '1'
 									orderBy('order')->
 									all();
 		if(count($jstreedata) == 0)
@@ -1835,10 +1867,10 @@ class SiteController extends Controller
 
 		// shold pass back the NEW recipie if successful otherwise error so the front end doesn't do anything.
 		
-		if($this->copyRecipe($recipe_id, $status) === false)
+		if(($new_recipe_id = $this->copyRecipe($recipe_id, $status)) === false)
 			$json_response = formatJSONResponse($status, ['recipe_id' => $recipe_id]);
 		else
-			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $recipe_id]);
+			$json_response = formatJSONResponse(JSON_RESP_OK, ['recipe_id' => $new_recipe_id]);	// send the new recipe back for loading
 		
 	    return \Yii::createObject([
         'class' => 'yii\web\Response',
