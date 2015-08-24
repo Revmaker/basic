@@ -445,7 +445,7 @@ function setEditState(new_state)
 				gEditState = 'inactive';	// new load or unknown state
 			
 		
-		setButtonState(gEditState);		// update button to new state
+		setControlState(gEditState);		// update button to new state
 }
 
 function setRecipeControlState(state)
@@ -470,8 +470,8 @@ function setRecipeControlState(state)
 	}
 }
 
-// rename to edit state or something...
-function setButtonState(state)
+// set all control state based on some globals and current state
+function setControlState(state)
 {
 	if(state == 'new')
 	{
@@ -533,9 +533,12 @@ function setButtonState(state)
 			{
 				setReadOnly(true);
 				$("#edit-state").html("Browse Mode");
-
-				$("#remove").prop("disabled",false);
 				$("#remove").show();
+
+				if(gCurrType == 'root')
+					$("#remove").prop("disabled",true);
+				else
+					$("#remove").prop("disabled",false);
 
 				// if node is a leaf, can't add anything to it
 
@@ -882,7 +885,13 @@ $('#remove').on('click',function(event)
 		alert('Nothing Selected, Select something!');
 		return;
 	}
-
+	
+	if(gCurrType == 'root')
+	{
+		alert('Sorry, Can\'t Delete Root Node, Delete entire recipe if that\'s your game!');
+		return;
+	}
+	
 	swal({
 	  title: "Are You Sure?", 
 	  text: "Warning - The delete is permanent!",
@@ -1148,8 +1157,6 @@ function updateNode()
 		alert('Nothing Selected, can\'t update!');
 		return;
 	}
-	
-	//alert('Update Node ' + selected[0]);
 	
 	// that parent id is enough to get the
 	// recipe id, all parms needed
