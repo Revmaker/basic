@@ -1,16 +1,7 @@
 Yii 2 Basic Project Template
 ============================
 
-Yii 2 Basic Project Template is a skeleton [Yii 2](http://www.yiiframework.com/) application best for
-rapidly creating small projects.
-
-The template contains the basic features including user login/logout and a contact page.
-It includes all commonly used configurations that would allow you to focus on adding new
-features to your application.
-
-[![Latest Stable Version](https://poser.pugx.org/yiisoft/yii2-app-basic/v/stable.png)](https://packagist.org/packages/yiisoft/yii2-app-basic)
-[![Total Downloads](https://poser.pugx.org/yiisoft/yii2-app-basic/downloads.png)](https://packagist.org/packages/yiisoft/yii2-app-basic)
-[![Build Status](https://travis-ci.org/yiisoft/yii2-app-basic.svg?branch=master)](https://travis-ci.org/yiisoft/yii2-app-basic)
+This is the start of the Recipe Editor. It's based on the Yii 2 basic template
 
 DIRECTORY STRUCTURE
 -------------------
@@ -21,52 +12,40 @@ DIRECTORY STRUCTURE
       controllers/        contains Web controller classes
       mail/               contains view files for e-mails
       models/             contains model classes
-      runtime/            contains files generated during runtime
+      runtime/            contains files generated during runtime (MUST BE CHMOD 777'ed)
       tests/              contains various tests for the basic application
       vendor/             contains dependent 3rd-party packages
       views/              contains view files for the Web application
       web/                contains the entry script and Web resources
-
+      web/assets          contains the Web assets created by Yii (MUST BE CHMOD 777'ed)
 
 
 REQUIREMENTS
 ------------
 
 The minimum requirement by this project template that your Web server supports PHP 5.4.0.
-
+You may need to install composer and bower 
 
 INSTALLATION
 ------------
 
-### Install from an Archive File
+### Install from here
 
-Extract the archive file downloaded from [yiiframework.com](http://www.yiiframework.com/download/) to
-a directory named `basic` that is directly under the Web root.
+Change owner of all files to something like ec2-users:www (for AWS) or for
+Ubuntu/Mint (username):www-data where username is your usename if that's not clear
+Do a clone into a director. Chmod the the web/assets, and runtime directory to 777
+Run Composer in the projects working directory by something like this `composer update`
 
-You can then access the application through the following URL:
-
-~~~
-http://localhost/basic/web/
-~~~
-
-
-### Install via Composer
+### Composer
 
 If you do not have [Composer](http://getcomposer.org/), you may install it by following the instructions
 at [getcomposer.org](http://getcomposer.org/doc/00-intro.md#installation-nix).
-
-You can then install this project template using the following command:
-
-~~~
-php composer.phar global require "fxp/composer-asset-plugin:~1.0.0"
-php composer.phar create-project --prefer-dist --stability=dev yiisoft/yii2-app-basic basic
-~~~
 
 Now you should be able to access the application through the following URL, assuming `basic` is the directory
 directly under the Web root.
 
 ~~~
-http://localhost/basic/web/
+http://localhost/basic/web/ or http://yourdomain/basic/web/
 ~~~
 
 
@@ -80,9 +59,9 @@ Edit the file `config/db.php` with real data, for example:
 ```php
 return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'mysql:host=localhost;dbname=yii2basic',
-    'username' => 'root',
-    'password' => '1234',
+    'dsn' => 'mysql:host=localhost;dbname=edmunds-jato',	// currently this is the db, but subject to change
+    'username' => 'revmaker',	// these must match your credential
+    'password' => 'revmaker',
     'charset' => 'utf8',
 ];
 ```
