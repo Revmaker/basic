@@ -84,12 +84,16 @@ $this->params['breadcrumbs'][] = $this->title;
 	.jstreeview .jstree-container-ul > .jstree-closed> .jstree-ocl { background-position: 0px 0px; }
 	.jstreeview .jstree-container-ul > .jstree-leaf> .jstree-ocl { background:transparent; }
 
+	.version-number {
+		display : inline;
+		margin-top : 7px;
+	}
+	
 </style>
    
 <?php 
 	PNotifyAsset::register($this);	// load js for PNotify
 	AlertAsset::register($this); 	// load for sweetalert
-
 ?>	
 
 <div class="site-about">
@@ -107,7 +111,7 @@ $this->params['breadcrumbs'][] = $this->title;
 			<button id="edit-recipe" class="btn btn-primary">Edit</button>
 			<button id="copy-recipe" class="btn btn-primary">Copy</button>
 			<button id="delete-recipe" class="btn btn-primary">Delete</button>
-			
+			<div class="version-number pull-right">v1.10</div>
 		</div>
 	</div>
 	
