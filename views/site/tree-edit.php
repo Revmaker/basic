@@ -9,11 +9,30 @@ use yii\web\JsExpression;
 use raoul2000\widget\pnotify\PNotifyAsset;
 use yii2mod\alert\AlertAsset;
 
+use kartik\widgets\Select2;
+
 $this->title = 'Recipe Editor';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
  <style> 
+
+	/* next few rules are for select 2 which doesn't quite match so some tweeks */
+	.input-group-sm .select2-container--krajee .select2-selection--single {
+			font-size: inherit;
+		}
+
+	.select2-container--krajee.select2-container--disabled .select2-selection,
+		.select2-container--krajee.select2-container--disabled .select2-selection--multiple .select2-selection__choice {
+			background-color: #ddd;
+	}
+
+	.input-group-sm .select2-container--krajee .select2-selection--single .select2-selection__arrow b {
+		border-width: 6px 4px 0px;
+		margin-left: -3px;
+	}
+	/* select2 hack end */
+
 	.recipe_select_panel, .recipe_add_panel{
 		font-size:16px; 
 		border-style: solid;
@@ -191,7 +210,7 @@ $this->params['breadcrumbs'][] = $this->title;
 		<div class="control-group">
 		  <label class="control-label" for="textinput">Name</label>
 		  <div class="controls">
-			<input name="name" placeholder="" class="input-xlarge" type="text">
+			<input name="name" placeholder="" class="input-xlarge" type="text"  size="32">
 		  </div>
 		</div>
 
@@ -208,16 +227,24 @@ $this->params['breadcrumbs'][] = $this->title;
 			?>
 		  </div>
 		</div>
-		<div class="control-group no_disp_parent">
+		<div class="control-group">
 		  <label class="control-label" for="textinput">Specification</label>
 		  <div class="controls">
-			  
 			<?php
-				$specs = $this->context->getSpecs();
-						?>  
-			<?= Html::dropDownList('spec_list', '', ArrayHelper::map($specs, 'id', 'spec_name'), 
-									['id'=>'spec_list',
-									]); 
+				$data = $this->context->getSpecsByCat();
+				 echo \kartik\select2\Select2::widget([
+						'name' => 'spec_list',
+						'id' => 'spec_list',
+						'data' => $data,
+						'size' => 'sm',
+						'theme' => \kartik\select2\Select2::THEME_KRAJEE,
+						'options' => [
+							'placeholder' => 'Type for Search, or Select From List',
+						],
+						'pluginOptions' => [
+								'allowClear' => true,
+							],
+					]);
 			?>
 		  </div>
 		</div>
@@ -225,21 +252,21 @@ $this->params['breadcrumbs'][] = $this->title;
 		<div class="control-group">
 		  <label class="control-label" for="textinput">Order</label>
 		  <div class="controls">
-			<input name="order" placeholder="" class="input-xlarge" type="text">
+			<input name="order" placeholder="" class="input-xlarge" type="text" size="8">
 		  </div>
 		</div>
 
 		<div class="control-group no_disp_parent">
 		  <label class="control-label" for="textinput">Min</label>
 		  <div class="controls">
-			<input name="min" placeholder="" class="input-xlarge" type="text">
+			<input name="min" placeholder="" class="input-xlarge" type="text" size="8">
 		  </div>
 		</div>
 		
 		<div class="control-group no_disp_parent">
 		  <label class="control-label" for="textinput">Max</label>
 		  <div class="controls">
-			<input name="max" placeholder="" class="input-xlarge" type="text">
+			<input name="max" placeholder="" class="input-xlarge" type="text" size="8">
 		  </div>
 		</div>
 		<br />
@@ -352,7 +379,10 @@ function clearEdits()
 	$("input[name=min]").val('');			
 	$("input[name=max]").val('');		
 	
-	$("#spec_list").val('9999');
+	
+	
+	//$("#spec_list").val('9999');
+	$("#spec_list").val('9999').trigger("change");
 	$("#weight_list").val('');	
 }
 
@@ -982,11 +1012,10 @@ function getNode(node_id)
 			$("input[name=name]").val(node.name);			
 			$("#weight_list").val(node.weight);
 			
-			//$("input[name=spec_id]").val(node.spec_id);
-			
 			// set spec list box
-			$("#spec_list").val(node.spec_id);
-						
+			//$("#spec_list").val(node.spec_id);
+			$("#spec_list").val(node.spec_id).trigger("change");
+			
 			$("input[name=order]").val(node.order);			
 			$("input[name=min]").val(node.min);			
 			$("input[name=max]").val(node.max);			
@@ -1026,10 +1055,8 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		node = getNodeById(data.selected[0])
 		gCurrParent = node.parent;
 	}
-	else // its parent or root
-	{
-		gCurrParent = data.selected[0]; // it a parent so can add to it if any child selected
-	}
+	else
+		gCurrParent = data.selected[0]; // it a parent or root so can add to it if any child selected
 
 	// call the ajax function that gets a node.
 	
