@@ -378,10 +378,6 @@ function clearEdits()
 	$("input[name=order]").val('');			
 	$("input[name=min]").val('');			
 	$("input[name=max]").val('');		
-	
-	
-	
-	//$("#spec_list").val('9999');
 	$("#spec_list").val('9999').trigger("change");
 	$("#weight_list").val('');	
 }
@@ -559,10 +555,16 @@ function setControlState(state)
 				$("#remove").show();
 
 				if(gCurrType == 'root')
+				{
 					$("#remove").prop("disabled",true);
+					$("#edit").prop("disabled",true);
+				}
 				else
+				{
 					$("#remove").prop("disabled",false);
-
+					$("#edit").prop("disabled",false);
+				}
+				
 				// if node is a leaf, can't add anything to it
 
 				if(gCurrType == 'parent' || gCurrType == 'root')
@@ -586,7 +588,6 @@ function setControlState(state)
 				$("#delete-recipe").prop("disabled", false);
 				$("#delete-recipe").show();
 				
-				$("#edit").prop("disabled",false);
 				$("#edit").show();
 
 				$("#save").prop("disabled",true);
