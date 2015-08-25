@@ -9,8 +9,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <h1><?= Html::encode($this->title) ?></h1>
 
     <p>
-        This is the About page. This powerful application will help provide a framework for the Edmunds Data Development Project. 
+        This is the About page. This powerful application will help provide a framework for the Equalizer Project. 
     </p>
 
-    <code><?= __FILE__ ?></code>
 </div>
