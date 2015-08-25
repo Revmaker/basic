@@ -1270,10 +1270,7 @@ class SiteController extends Controller
 	}
 
 	
-	// pulls all nodes for a given recipe. This only pulls
-	// nodes with the active flag set to 1. The active flag
-	// should NOT be used in this type of data typically 
-	
+	// pulls all nodes for a given recipe. This pulls all nodes
     public function getRecipeTree($recipe_id)
     {
 		$jstreedata = (new Query())->select('id, parent_id, name, spec_id')->
@@ -1286,11 +1283,6 @@ class SiteController extends Controller
 		
 		return $jstreedata;
 	}
-	
-	// send the entire tree in JSTree secondary JSON format
-	// this function does not use the same status as the other
-	// ajax calls as I'm yet unable to make that work, so for now
-	// ship data exacly as JSTree needs
 	
 	// TBD 
 	// add fix mode which will create a NEW NODE. This node will
@@ -1527,7 +1519,7 @@ class SiteController extends Controller
 		{
 			if(($jstreedata = $this->getRecipeTree($recipe_id)) !== false)
 			{
-				$a_index    = 0;
+				$a_index = 0;
 				
 				foreach ($jstreedata as $row)
 				{
