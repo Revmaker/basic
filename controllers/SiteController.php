@@ -158,6 +158,36 @@ class SiteController extends Controller
 									all();
 		return $specs;
 	}
+	
+
+    public function getSpecsByCat()
+    {
+		$rows = (new Query())->select('specs.id as id, specs.spec_name as text, cats.category_name')->
+									from('{{%specs}} as specs, {{%categories}} as cats')->
+									where('specs.id != :id', ['id'=>9999])->
+									andWhere('specs.category_id = cats.id')->
+									orderBy('category_id,spec_name')->
+									all();
+
+		$specs = [];
+		$cat_specs = [];
+		$heading = $rows[0]['category_name'];
+
+		foreach($rows as $row)
+		{
+			if($heading != $row['category_name'])
+			{
+				$specs[] = ['text' => $heading, 'children' => ArrayHelper::map($cat_specs, 'id', 'text')];
+				$heading = $row['category_name'];
+				$cat_specs = [];
+			}
+			
+			$cat_specs[] = ['id' => $row['id'], 'text' => $row['text']];
+		}
+								
+		return ArrayHelper::map($specs, 'text', 'children');
+	}
+
 
 	// similar to above, but returns list of valid weights, keep 
 	// results like database just in case we need to pull from db later
@@ -1317,7 +1347,6 @@ class SiteController extends Controller
 					}
 					else
 					{
-						
 						$jstree[$a_index]['type'] = 'parent';
 						$tree_data[$id]['type'] = 'parent';
 					}
