@@ -160,6 +160,8 @@ class SiteController extends Controller
 	}
 	
 
+	// function to return a proper formatted array for the Select2 component
+	// this builds a list of spec categories and then an array of the specs
     public function getSpecsByCat()
     {
 		$rows = (new Query())->select('specs.id as id, specs.spec_name as text, cats.category_name')->
