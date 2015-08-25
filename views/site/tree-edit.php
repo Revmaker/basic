@@ -458,22 +458,15 @@ function setRecipeState(new_state)
 function setEditState(new_state)
 {
 	if(new_state == 'new')
-	{
 		gEditState = 'new';
-	}
 	else
 		if(new_state == 'update')
-		{
 			gEditState = 'update';
-		}
 		else
 			if(new_state == 'browse')
-			{
 				gEditState = 'browse';	// all other cases to browse
-			}
 			else
 				gEditState = 'inactive';	// new load or unknown state
-			
 		
 		setControlState(gEditState);		// update button to new state
 }
@@ -604,7 +597,7 @@ function setControlState(state)
 			else
 			{
 				setReadOnly(true);
-				$("#edit-state").html("Please Load Recipe");
+				$("#edit-state").html("Please Select Node or Load Recipe");
 
 				$("#remove").hide();
 				$("#new-leaf").hide();
@@ -787,19 +780,12 @@ $('#delete-recipe').on('click',function(event)
 $('#save-recipe').on('click',function(event)
 {
 	if(gCurrRecipeState == 'new')
-	{
 		addRecipe();
-	}
 	else
 		if(gCurrRecipeState == 'update')
-		{
-			// alert('Updating Recipe ID : ' + gCurrRecipe);
 			updateRecipe();	 // gCurrRecipe has the active ID
-		}
 		else
-		{
 			alert('Unknown Recipe state, reload page');
-		}
 		
 	// state of controls set in resulting call to add/updateRecipe() if
 	// and ONLY if a successful operation went down. otherwise
@@ -888,19 +874,12 @@ $('#save').on('click',function(event)
 	// can be here if add or update save...
 	
 	if(gEditState == 'new')
-	{
-		//alert('Save the Record');
 		addNode();
-	}
 	else
 		if(gEditState == 'update')
-		{
 			updateNode();
-		}
 		else
-		{
 			alert('ZZZZ Package Memory Dump : Unknown state. Can\'t save or update');
-		}
 
 		setEditState('browse');
 });
@@ -1012,8 +991,7 @@ function getNode(node_id)
 			$("input[name=name]").val(node.name);			
 			$("#weight_list").val(node.weight);
 			
-			// set spec list box
-			//$("#spec_list").val(node.spec_id);
+			// set spec list box (select2 required change trigger)
 			$("#spec_list").val(node.spec_id).trigger("change");
 			
 			$("input[name=order]").val(node.order);			
@@ -1038,7 +1016,7 @@ $('#treeview').on('changed.jstree', function (e, data) 	{
 		gCurrParent = -1;
 		gCurrNode = -1;
 		gCurrType = 'invalid';
-		setEditState('browse');
+		setEditState('inactive');
 		return;
 	}
 	
@@ -1076,8 +1054,6 @@ function addNode()
 		return;
 	}
 	
-	//alert('Adding Node to Parent ' + selected[0]);
-
 	// these must be set for all node types
 	
 	var name = $("input[name=name]").val();
@@ -1320,10 +1296,6 @@ $('#treeview').on("move_node.jstree", function (e, data) {
 				return;
 			}
 
-			//if(source_node.type == 'leaf')
-			//	alert('Leaf Moved');
-			//else
-			//	alert('Parent Node Move');
 			alert('Move went OK!');
 			
 			$('#treeview').jstree('refresh');	// once moved refresh get the new data
