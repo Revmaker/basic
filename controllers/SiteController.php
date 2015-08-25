@@ -168,7 +168,7 @@ class SiteController extends Controller
 									from('{{%specs}} as specs, {{%categories}} as cats')->
 									where('specs.id != :id', ['id'=>9999])->
 									andWhere('specs.category_id = cats.id')->
-									orderBy('category_id,spec_name')->
+									orderBy('category_name,spec_name')->
 									all();
 
 		$specs = [];
@@ -494,7 +494,7 @@ class SiteController extends Controller
 		{
 			$count = Yii::$app->db->createCommand()->insert('{{%attributes}}', 
 					[	// insert fields
-						'name'=> 'Total Score', 
+						'name'=> $name, // use the recipe name for the root node
 						'weight' => '',
 						'order' => 0,
 						'parent_id' => 0,
