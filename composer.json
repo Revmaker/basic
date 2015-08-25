@@ -21,10 +21,10 @@
         "yiisoft/yii2-swiftmailer": "*",
 	"yii-dream-team/yii2-jstree": "*",
 	"bower-asset/sweetalert" : "*",
-	"bower-asset/bootstrap-sweetalert" : "*",
 	"raoul2000/yii2-pnotify-widget": "*",
-	"yii2mod/yii2-sweet-alert": "*"
-    },
+	"yii2mod/yii2-sweet-alert": "*",
+	"kartik-v/yii2-widget-select2": "@dev"    
+	},
     "require-dev": {
         "yiisoft/yii2-codeception": "*",
         "yiisoft/yii2-debug": "*",
