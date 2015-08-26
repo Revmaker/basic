@@ -18,19 +18,23 @@ $this->params['breadcrumbs'][] = $this->title;
  <style> 
 
 	/* next few rules are for select 2 which doesn't quite match so some tweeks */
-	.input-group-sm .select2-container--krajee .select2-selection--single {
-			font-size: inherit;
-		}
 
-	.select2-container--krajee.select2-container--disabled .select2-selection,
-		.select2-container--krajee.select2-container--disabled .select2-selection--multiple .select2-selection__choice {
-			background-color: #ddd;
+	/* force width */
+	.input-group-sm {
+		width: 275px;
 	}
 
-	.input-group-sm .select2-container--krajee .select2-selection--single .select2-selection__arrow b {
-		border-width: 6px 4px 0px;
-		margin-left: -3px;
+	/* fix active color */
+	.select2-container--default.select2-container--disabled .select2-selection,
+		.select2-container--default.select2-container--disabled .select2-selection--multiple .select2-selection__choice {
+			background-color: #D6D6D6; 
 	}
+	
+	/* fix background color */
+	.select2-container--default .select2-selection--single {
+		background-color: #F3F3F3;
+	}
+
 	/* select2 hack end */
 
 	.recipe_select_panel, .recipe_add_panel{
@@ -225,8 +229,8 @@ $this->params['breadcrumbs'][] = $this->title;
 			<?php
 				$weights = $this->context->getWeights();
 						?>  
-			<?= Html::dropDownList('weight_list', '0', ArrayHelper::map($weights, 'id', 'weight'), 
-									['id'=>'weight_list', 
+			<?= Html::dropDownList('weight-list', '0', ArrayHelper::map($weights, 'id', 'weight'), 
+									['id'=>'weight-list', 
 									]); 
 			?>
 		  </div>
@@ -237,11 +241,11 @@ $this->params['breadcrumbs'][] = $this->title;
 			<?php
 				$data = $this->context->getSpecsByCat();
 				 echo \kartik\select2\Select2::widget([
-						'name' => 'spec_list',
-						'id' => 'spec_list',
+						'name' => 'spec-list',
+						'id' => 'spec-list',
 						'data' => $data,
 						'size' => 'sm',
-						'theme' => \kartik\select2\Select2::THEME_KRAJEE,
+						'theme' => \kartik\select2\Select2::THEME_DEFAULT,
 						'options' => [
 							'placeholder' => 'Type for Search, or Select From List',
 						],
@@ -382,8 +386,8 @@ function clearEdits()
 	$("input[name=order]").val('');			
 	$("input[name=min]").val('');			
 	$("input[name=max]").val('');		
-	$("#spec_list").val('9999').trigger("change");
-	$("#weight_list").val('');	
+	$("#spec-list").val('9999').trigger("change");
+	$("#weight-list").val('');	
 }
 
 function clearRecipeEdits()
@@ -414,8 +418,8 @@ function setReadOnly(state)
 	$("input[name=max]").prop('readonly', state);
 	
 	// drop down lists
-	$("#spec_list").attr("disabled", state); 
-	$("#weight_list").attr("disabled", state); 
+	$("#spec-list").attr("disabled", state); 
+	$("#weight-list").attr("disabled", state); 
 }
 
 function setEditIconState(node_type)
@@ -829,7 +833,7 @@ $('#new-leaf').on('click',function(event)
 	
 	// set some defaults
 	
-	$("#weight_list").val('0');
+	$("#weight-list").val('0');
 	$("input[name=order]").val('10');
 	$("input[name=min]").val('0');
 	$("input[name=max]").val('0');
@@ -855,7 +859,7 @@ $('#new-parent').on('click',function(event)
 
 	clearEdits();
 	setEditState('new');
-	$("#weight_list").val('0');
+	$("#weight-list").val('0');
 	$("input[name=order]").val('10');
 });
 
@@ -994,10 +998,10 @@ function getNode(node_id)
 			// try stuffing some data to input fields
 
 			$("input[name=name]").val(node.name);			
-			$("#weight_list").val(node.weight);
+			$("#weight-list").val(node.weight);
 			
 			// set spec list box (select2 required change trigger)
-			$("#spec_list").val(node.spec_id).trigger("change");
+			$("#spec-list").val(node.spec_id).trigger("change");
 			
 			$("input[name=order]").val(node.order);			
 			$("input[name=min]").val(node.min);			
@@ -1062,13 +1066,13 @@ function addNode()
 	// these must be set for all node types
 	
 	var name = $("input[name=name]").val();
-	var weight_id = $("#weight_list").val();
+	var weight_id = $("#weight-list").val();
 	var order = $("input[name=order]").val();
 
 	// if a leaf then these must also be set from the form
 	if(gEditType == 'leaf')
 	{
-		var spec_id = $("#spec_list").val();
+		var spec_id = $("#spec-list").val();
 		var min = $("input[name=min]").val();
 		var max = $("input[name=max]").val();
 	}
@@ -1170,8 +1174,8 @@ function updateNode()
 	// recipe id, all parms needed
 
 	var name = $("input[name=name]").val();
-	var weight_id = $("#weight_list").val();
-	var spec_id = $("#spec_list").val();
+	var weight_id = $("#weight-list").val();
+	var spec_id = $("#spec-list").val();
 		
 	var order = $("input[name=order]").val();
 	var min = $("input[name=min]").val();
