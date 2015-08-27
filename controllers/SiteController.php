@@ -6,10 +6,6 @@ use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
-use yii\db\Query;
-use yii\helpers\ArrayHelper;
-use yii\helpers\Html;
-use app\models\LoginForm;
 use app\models\ContactForm;
 
 class SiteController extends Controller
