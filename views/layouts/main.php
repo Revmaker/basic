@@ -45,10 +45,6 @@ AppAsset::register($this);
                     ['label' => 'Home', 'url' => ['/site/index']],
                     ['label' => 'Recipe Editor', 'url' => ['/site/tree-edit']],
                     ['label' => 'About', 'url' => ['/site/about']],
-					[
-						'label' => 'User Admin',
-						'items'=> UserManagementModule::menuItems(),
-					],
                     Yii::$app->user->isGuest ?
                         ['label' => 'Login', 'url' => ['/user-management/auth/login']] : 
                         ['label' => 'Logout (' . Yii::$app->user->identity->username . ')', 'url' => ['/user-management/auth/logout']],
