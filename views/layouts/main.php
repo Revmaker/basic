@@ -42,7 +42,7 @@ AppAsset::register($this);
 				'encodeLabels'=>false, // don't encode stuff in the label, needed for UserManagementModule::menuItems()
                 'items' => [
 
-                    ['label' => 'Home', 'url' => ['/site/index']],
+                    // ['label' => 'Home', 'url' => ['/site/index']],
                     ['label' => 'Recipe Editor', 'url' => ['/recipe/tree-edit']],
                     ['label' => 'About', 'url' => ['/site/about']],
                     Yii::$app->user->isGuest ?
