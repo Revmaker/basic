@@ -23,7 +23,8 @@
 	"bower-asset/sweetalert" : "*",
 	"raoul2000/yii2-pnotify-widget": "*",
 	"yii2mod/yii2-sweet-alert": "*",
-	"kartik-v/yii2-widget-select2": "@dev"    
+	"kartik-v/yii2-widget-select2": "@dev",
+	"webvimark/module-user-management": "*"   
 	},
     "require-dev": {
         "yiisoft/yii2-codeception": "*",
