@@ -7,8 +7,9 @@ $config = [
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
     'components' => [
-
-// added for simple pretty urls that will map r=site/about to /about    
+		
+		// added for simple pretty urls that will map r=site/about to /about    
+		
 		'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
@@ -22,10 +23,25 @@ $config = [
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],
-        'user' => [
+
+/*
+  Default user class replaced with the webvimark
+  
+         'user' => [
             'identityClass' => 'app\models\User',
             'enableAutoLogin' => true,
         ],
+*/
+
+		'user' => [
+			'class' => 'webvimark\modules\UserManagement\components\UserConfig',
+
+			// Comment this if you don't want to record user logins
+			'on afterLogin' => function($event) {
+					\webvimark\modules\UserManagement\models\UserVisitLog::newVisitor($event->identity->id);
+				}
+		],
+
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
@@ -35,6 +51,7 @@ $config = [
             // 'useFileTransport' to false and configure a transport
             // for the mailer to send real emails.
             'useFileTransport' => true,
+            'fileTransportPath' => '@runtime/test-mail', // save test emails
         ],
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
@@ -47,6 +64,25 @@ $config = [
         ],
         'db' => require(__DIR__ . '/db.php'),
     ],
+    
+    // added for user management
+	'modules'=>[
+		'user-management' => [
+			'class' => 'webvimark\modules\UserManagement\UserManagementModule',
+
+			// 'enableRegistration' => true,
+
+			// Here you can set your handler to change layout for any controller or action
+			// Tip: you can use this event in any module
+			'on beforeAction'=>function(yii\base\ActionEvent $event) {
+					if ( $event->action->uniqueId == 'user-management/auth/login' )
+					{
+						$event->action->controller->layout = 'loginLayout.php';
+					};
+				},
+		],
+	],    
+	
     'params' => $params,
 ];
 
