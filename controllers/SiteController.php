@@ -109,9 +109,18 @@ function formatJSONResponse($status, $data)
 
 class SiteController extends Controller
 {
+	// public $freeAccess = true;	// remove to allow all access without password
 	
     public function behaviors()
     {
+		return [
+			'ghost-access'=> [
+				'class' => 'webvimark\modules\UserManagement\components\GhostAccessControl',
+			],
+		];		
+
+/*		
+ * 	Yii Version of Access Control 
         return [	
             'access' => [
                 'class' => AccessControl::className(),
@@ -131,6 +140,9 @@ class SiteController extends Controller
                 ],
             ],
         ];
+  
+  *
+  */
     }
 
     public function actions()
@@ -145,20 +157,6 @@ class SiteController extends Controller
             ],
         ];
     }
-
-    // returns a list of the specs. Will return only active
-    // format is as an array of records. don't bring back the 9999 spec id, it's not
-    // selectable by the user
-    public function getSpecs()
-    {
-		$specs = (new Query())->select('id, spec_name')->
-									from('{{%specs}}')->
-									where('id != :id', ['id'=>9999])->
-									orderBy('spec_name')->
-									all();
-		return $specs;
-	}
-	
 
 	// function to return a proper formatted array for the Select2 component
 	// this builds a list of spec categories and then an array of the specs
@@ -175,6 +173,8 @@ class SiteController extends Controller
 		$cat_specs = [];
 		$heading = $rows[0]['category_name'];
 
+		// do a heading at each change of the category name
+		
 		foreach($rows as $row)
 		{
 			if($heading != $row['category_name'])
@@ -1448,6 +1448,11 @@ class SiteController extends Controller
 	////////////////////////////////////////////////////////////////////
 	// ACTIONS BELOW
 	////////////////////////////////////////////////////////////////////
+
+	public function actionTest()
+	{
+        return $this->render('test');
+	}
 	
     public function actionIndex()
     {
