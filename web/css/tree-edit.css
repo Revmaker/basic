@@ -1,0 +1,81 @@
+/*
+* Specific CSS file for tree-editor. 
+* Begat 08/25/2015 sjg 
+*/
+
+
+/* next few rules are for select 2 which doesn't quite match so some tweeks */
+
+/* force width */
+.input-group-sm {
+	width: 275px;
+}
+
+/* fix active color */
+.select2-container--default.select2-container--disabled .select2-selection,
+	.select2-container--default.select2-container--disabled .select2-selection--multiple .select2-selection__choice {
+		background-color: #D6D6D6; 
+}
+
+/* fix background color */
+.select2-container--default .select2-selection--single {
+	background-color: #F3F3F3;
+}
+
+/* select2 hack end */
+
+.recipe_select_panel, .recipe_add_panel{
+	font-size:16px; 
+	border-style: solid;
+	border-radius : 10px;
+	padding :10px;
+	margin-bottom: 5px;
+	/*margin-right : 10px;*/
+}
+
+.recipe_add_panel {
+	margin-right : 0px;
+	margin-left  : 0px;
+}
+
+#recipe_list {
+	width : 50%;	/* width of dropdown*/
+	margin-right : 20px;
+}
+
+.tree-panel { 
+	font-size:14px; 
+	border-style: solid;
+	border-radius : 10px 0 0 10px;
+	padding :10px;
+	height:600px;
+	margin-right : 10px;
+	overflow-y : auto;
+}
+
+.edit-panel {
+	font-size:14px; 
+	border-style: solid;
+	border-radius : 0 10px 10px  0;
+	padding :10px;
+	height:600px;
+}
+
+.row {
+	display: flex; /* equal height of the children */
+}
+
+.state_icons {
+	display : none;	// hide all display icons in the edit box
+}
+
+/* removes the top dots on the root node that look bad */
+
+.jstreeview .jstree-container-ul > .jstree-open > .jstree-ocl { background-position: -32px 0px;}
+.jstreeview .jstree-container-ul > .jstree-closed> .jstree-ocl { background-position: 0px 0px; }
+.jstreeview .jstree-container-ul > .jstree-leaf> .jstree-ocl { background:transparent; }
+
+.version-number {
+	display : inline;
+	margin-top : 7px;
+}
