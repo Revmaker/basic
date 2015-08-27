@@ -4,8 +4,10 @@ use yii\bootstrap\Nav;
 use yii\bootstrap\NavBar;
 use yii\widgets\Breadcrumbs;
 use app\assets\AppAsset;
-
 use yii\helpers\Url;
+
+use webvimark\modules\UserManagement\components\GhostNav;
+use webvimark\modules\UserManagement\UserManagementModule;
 
 /* @var $this \yii\web\View */
 /* @var $content string */
@@ -35,18 +37,26 @@ AppAsset::register($this);
                     'class' => 'navbar-inverse navbar-fixed-top',
                 ],
             ]);
-            echo Nav::widget([
+            echo GhostNav::widget([
                 'options' => ['class' => 'navbar-nav navbar-right'],
+				'encodeLabels'=>false, // don't encode stuff in the label, needed for UserManagementModule::menuItems()
                 'items' => [
+
                     ['label' => 'Home', 'url' => ['/site/index']],
                     ['label' => 'Recipe Editor', 'url' => ['/site/tree-edit']],
                     ['label' => 'About', 'url' => ['/site/about']],
-                    //['label' => 'Contact', 'url' => ['/site/contact']],
+					[
+						'label' => 'User Admin',
+						'items'=> UserManagementModule::menuItems(),
+					],
                     Yii::$app->user->isGuest ?
-                        ['label' => 'Login', 'url' => ['/site/login']] :
-                        ['label' => 'Logout (' . Yii::$app->user->identity->username . ')',
-                            'url' => ['/site/logout'],
-                            'linkOptions' => ['data-method' => 'post']],
+                        ['label' => 'Login', 'url' => ['/user-management/auth/login']] : 
+                        ['label' => 'Logout (' . Yii::$app->user->identity->username . ')', 'url' => ['/user-management/auth/logout']],
+      				[
+					 'label' => 'Admin',
+					 'items'=> 	array_merge(UserManagementModule::menuItems(), [ ['label'=>'Change Password', 'url'=>['/user-management/auth/change-own-password']]]),
+      				],
+
                 ],
             ]);
             NavBar::end();
