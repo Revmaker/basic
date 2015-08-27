@@ -6,102 +6,33 @@ use yii\helpers\Url;
 use yii\web\view;
 use yii\web\JsExpression;
 
+use yiidreamteam\jstree\JsTree;
 use raoul2000\widget\pnotify\PNotifyAsset;
 use yii2mod\alert\AlertAsset;
-
-use kartik\widgets\Select2;
+use kartik\select2\Select2;
+use kartik\select2\ThemeDefaultAsset;
 
 $this->title = 'Recipe Editor';
 $this->params['breadcrumbs'][] = $this->title;
-?>
 
- <style> 
+PNotifyAsset::register($this);	// load js for PNotify
+AlertAsset::register($this); 	// load for sweetalert
+ThemeDefaultAsset::register($this);	// load this so that we can register another CSS for use AFTER this
 
-	/* next few rules are for select 2 which doesn't quite match so some tweeks */
+// Register the tree-edit css, this has to be done after the select2 theme is loaded, and in this case
+// we are using the default theme for the component. This all breaks if the theme is changed and
+// that asset must be manually loaded for this to keep the tree css file at the end of the list
+// need something like an option to say put to last...
 
-	/* force width */
-	.input-group-sm {
-		width: 275px;
-	}
+$this->registerCssFile('@web/css/tree-edit.css', ['depends'=>['kartik\select2\Select2Asset']]);
 
-	/* fix active color */
-	.select2-container--default.select2-container--disabled .select2-selection,
-		.select2-container--default.select2-container--disabled .select2-selection--multiple .select2-selection__choice {
-			background-color: #D6D6D6; 
-	}
-	
-	/* fix background color */
-	.select2-container--default .select2-selection--single {
-		background-color: #F3F3F3;
-	}
+//var_dump($this->getAssetManager()->bundles);
+//var_dump(\kartik\select2\ThemeDefaultAsset::className());
 
-	/* select2 hack end */
-
-	.recipe_select_panel, .recipe_add_panel{
-		font-size:16px; 
-		border-style: solid;
-		border-radius : 10px;
-		padding :10px;
-		margin-bottom: 5px;
-		/*margin-right : 10px;*/
-	}
-
-	.recipe_add_panel {
-		margin-right : 0px;
-		margin-left  : 0px;
-	}
-	
-	#recipe_list {
-		width : 50%;	/* width of dropdown*/
-		margin-right : 20px;
-	}
-	
-	.tree-panel { 
-		font-size:14px; 
-		border-style: solid;
-		border-radius : 10px 0 0 10px;
-		padding :10px;
-		height:600px;
-		margin-right : 10px;
-		overflow-y : auto;
-	}
-
-	.edit-panel {
-		font-size:14px; 
-		border-style: solid;
-		border-radius : 0 10px 10px  0;
-		padding :10px;
-		height:600px;
-	}
-
-	.row {
-		display: flex; /* equal height of the children */
-	}
-
-	.state_icons {
-		display : none;	// hide all display icons in the edit box
-	}
-	
-	/* removes the top dots on the root node that look bad */
-	
-	.jstreeview .jstree-container-ul > .jstree-open > .jstree-ocl { background-position: -32px 0px;}
-	.jstreeview .jstree-container-ul > .jstree-closed> .jstree-ocl { background-position: 0px 0px; }
-	.jstreeview .jstree-container-ul > .jstree-leaf> .jstree-ocl { background:transparent; }
-
-	.version-number {
-		display : inline;
-		margin-top : 7px;
-	}
-	
-</style>
-   
-<?php 
-	PNotifyAsset::register($this);	// load js for PNotify
-	AlertAsset::register($this); 	// load for sweetalert
 ?>	
 
-<div class="site-about">
-	<h1><?= Html::encode($this->title) ?></h1>
+<div class="site-tree-edit">
+	<h1><?= Html::img('@web/images/recipe.png')?>&nbsp<?= Html::encode($this->title) ?></h1>
 	<div class="row">
 		<div class="recipe_select_panel col-sm-12">
 			<?php
@@ -143,7 +74,7 @@ $this->params['breadcrumbs'][] = $this->title;
 	<div id="recipe-tree" class="row">
 	<div class="tree-panel col-sm-7">
 
-	<?= \yiidreamteam\jstree\JsTree::widget([
+	<?= JsTree::widget([
 		'containerOptions' => [
 			'class' => 'jstreeview',	// sets the the div's CLASS
 			'id' => 'treeview',			// sets the div's ID
@@ -240,12 +171,12 @@ $this->params['breadcrumbs'][] = $this->title;
 		  <div class="controls">
 			<?php
 				$data = $this->context->getSpecsByCat();
-				 echo \kartik\select2\Select2::widget([
+				 echo Select2::widget([
 						'name' => 'spec-list',
 						'id' => 'spec-list',
 						'data' => $data,
 						'size' => 'sm',
-						'theme' => \kartik\select2\Select2::THEME_DEFAULT,
+						'theme' => Select2::THEME_DEFAULT,	// if this is changes manually load the asset bundle for the theme!
 						'options' => [
 							'placeholder' => 'Type for Search, or Select From List',
 						],
