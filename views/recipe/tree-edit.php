@@ -46,7 +46,7 @@ $this->registerCssFile('@web/css/tree-edit.css', ['depends'=>['kartik\select2\Se
 			<button id="edit-recipe" class="btn btn-primary">Edit</button>
 			<button id="copy-recipe" class="btn btn-primary">Copy</button>
 			<button id="delete-recipe" class="btn btn-danger">Delete</button>
-			<div class="version-number pull-right">v1.10</div>
+			<div class="version-number pull-right">v1.21</div>
 		</div>
 	</div>
 	
