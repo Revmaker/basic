@@ -43,7 +43,7 @@ AppAsset::register($this);
                 'items' => [
 
                     ['label' => 'Home', 'url' => ['/site/index']],
-                    ['label' => 'Recipe Editor', 'url' => ['/site/tree-edit']],
+                    ['label' => 'Recipe Editor', 'url' => ['/recipe/tree-edit']],
                     ['label' => 'About', 'url' => ['/site/about']],
                     Yii::$app->user->isGuest ?
                         ['label' => 'Login', 'url' => ['/user-management/auth/login']] : 
