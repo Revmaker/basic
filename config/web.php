@@ -24,15 +24,6 @@ $config = [
             'class' => 'yii\caching\FileCache',
         ],
 
-/*
-  Default user class replaced with the webvimark
-  
-         'user' => [
-            'identityClass' => 'app\models\User',
-            'enableAutoLogin' => true,
-        ],
-*/
-
 		'user' => [
 			'class' => 'webvimark\modules\UserManagement\components\UserConfig',
 
@@ -65,7 +56,7 @@ $config = [
         'db' => require(__DIR__ . '/db.php'),
     ],
     
-    // added for user management
+    // added for user management - webvimark module
 	'modules'=>[
 		'user-management' => [
 			'class' => 'webvimark\modules\UserManagement\UserManagementModule',
